@@ -3,6 +3,7 @@ import {Header} from './header';
 import {Title} from './title';
 import {Techs} from './techs/techs';
 import {Footer} from './footer';
+import {Minesweeper} from './minesweeper/minesweeper';
 
 const styles = {
   container: {
@@ -24,6 +25,7 @@ export class Main extends Component {
         <Header/>
         <main style={styles.main}>
           <Title/>
+          <Minesweeper/>
           <Techs/>
         </main>
         <Footer/>
