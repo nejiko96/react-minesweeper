@@ -34,21 +34,23 @@ const styles = {
   cells: {
     lineHeight: 0
   },
-  cell01: cellStyle(0, 0),
-  cell0f: cellStyle(1, 0),
-  cell0h: cellStyle(2, 0),
-  cell10: cellStyle(0, 1),
-  cell11: cellStyle(1, 1),
-  cell12: cellStyle(2, 1),
-  cell13: cellStyle(0, 2),
-  cell14: cellStyle(1, 2),
-  cell15: cellStyle(2, 2),
-  cell16: cellStyle(0, 3),
-  cell17: cellStyle(1, 3),
-  cell18: cellStyle(2, 3),
-  cell19: cellStyle(0, 4),
-  cell1a: cellStyle(1, 4),
-  cell1b: cellStyle(2, 4),
+  cell: {
+    '01': cellStyle(0, 0),
+    '0f': cellStyle(1, 0),
+    '0h': cellStyle(2, 0),
+    '10': cellStyle(0, 1),
+    '11': cellStyle(1, 1),
+    '12': cellStyle(2, 1),
+    '13': cellStyle(0, 2),
+    '14': cellStyle(1, 2),
+    '15': cellStyle(2, 2),
+    '16': cellStyle(0, 3),
+    '17': cellStyle(1, 3),
+    '18': cellStyle(2, 3),
+    '19': cellStyle(0, 4),
+    '1a': cellStyle(1, 4),
+    '1b': cellStyle(2, 4),
+  },
   restart: {}
 };
 
@@ -67,29 +69,22 @@ MinesweeperRemain.propTypes = {
 class MinesweeperTimer extends Component {
   constructor(props) {
     super(props);
-    this.interval = this.timeParse(props.interval);
     this.state = {count: 0};
     // event binding
+    this.timeParse = this.timeParse.bind(this)
     this.start = this.start.bind(this)
     this.update = this.update.bind(this)
     this.stop = this.stop.bind(this)
   }
   timeParse(value) {
-    const regex = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/;
     const powers = {
-      // Yeah this is major overkill...
       'ms': 1,
-      'cs': 10,
-      'ds': 100,
-      's': 1000,
-      'das': 10000,
-      'hs': 100000,
-      'ks': 1000000
+      's': 1000
     }
     if (value === undefined || value === null) {
       return null;
     }
-    let result = regex.exec(value.toString().trim());
+    let result = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/.exec(value.toString().trim());
     if (result[2]) {
       let num = parseFloat(result[1]);
       let mult = powers[result[2]] || 1;
@@ -97,10 +92,20 @@ class MinesweeperTimer extends Component {
     }
     return value;
   }
-  componentWillReceiveProps(nextProps) {
-    if (this.props.interval !== nextProps.interval) {
-      this.interval = this.timeParse(nextProps.interval);
+  start() {
+    this.setState({count: 0});
+    this.intervalID = setInterval(this.update, this.timeParse(this.props.interval));
+  }
+  update() {
+    this.setState({count: this.state.count + 1});
+    if (this.props.limit > 0 && this.state.count >= this.props.limit) {
+      this.stop();
     }
+  }
+  stop() {
+    clearInterval(this.intervalID);
+  }
+  componentWillReceiveProps(nextProps) {
     if (this.props.running !== nextProps.running) {
       if (nextProps.running) {
         this.start();
@@ -113,19 +118,6 @@ class MinesweeperTimer extends Component {
     if (this.props.running) {
       this.start();
     }
-  }
-  start() {
-    this.setState({count: 0});
-    this.intervalID = setInterval(this.update, this.interval);
-  }
-  update() {
-    this.setState({count: this.state.count + 1});
-    if (this.props.limit > 0 && this.state.count >= this.props.limit) {
-      this.stop();
-    }
-  }
-  stop() {
-    clearInterval(this.intervalID);
   }
   render() {
     return (
@@ -140,8 +132,91 @@ MinesweeperTimer.propTypes = {
   running: React.PropTypes.bool.isRequired
 };
 
-class MineseeperCells extends Component {
+class MinesweeperBoard extends Component {
+  defaultSize(level) {
+    return {
+      easy: {
+        width:   9,
+        height:  9,
+        mines:  10
+      },
+      medium: {
+        width:  16,
+        height: 16,
+        mines:  40
+      },
+      hard: {
+        width:  30,
+        height: 16,
+        mines:  99
+      }
+    }[level];
+  }
+  customSize(props) {
+    const w = props.width ? this.inRange(props.width, 9, 30) : 9;
+    const h = props.height ? this.inRange(props.height, 9, 24) : 9;
+    const n = w * h;
+    const m = props.mines ?
+      this.inRange(props.mines, 10, this.maxMines(n)) :
+      this.defaultMines(n);
+    return {
+      witdh: w,
+      height: h,
+      mines: m
+    }
+  }
+  inRange(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  maxMines(n) {
+    return Math.floor(n * 0.94 - 8.45);
+  }
+  defaultMines(n) {
+    const percent = 10 + Math.floor(n / 45);
+    return Math.round(n * percent / 1000) * 10;
+  }
+  fillArray2D(w, h, value) {
+    return Array.apply(null, Array(h)).map(function() { return Array(w).fill(value); });
+  }
+  init(props) {
+    const size = this.defaultSize(props.level) || this.customSize(props);
+    console.log(size);
+    const w = size.width;
+    const h = size.height;
+    const other = {
+      remain: size.mines,
+      cells: this.fillArray2D(w, h, MinesweeperBoard.cellTypes.notMarked),
+      flags: this.fillArray2D(w, h, 0)
+    };
+    return Object.assign({},size, other);
+  }
+  startGame() {
+    this.props.onStart();
+  }
+  stopGame() {
+    this.props.onStop();
+  }
+  constructor(props) {
+    super(props);
+    this.state = this.init(props);
+  }
+  componentDidMount() {
+    this.props.onRemainChange(this.state.remain);
+  }
   render() {
+    console.log(this.state.cells);
+    const boardNodes = this.state.cells.map(function(row) {
+      const rowNodes = row.map(function(cell) {
+        return (
+          <span style={styles.cell[cell]}></span>
+        );
+      });
+      return (
+        <div>
+          {rowNodes}<br />
+        </div>
+      );
+    });
     // for (idx = 0; idx < this._cells; idx++) {
     //   if (idx > 0 && idx % this._width === 0) {
     //     html += '<br />';
@@ -150,24 +225,62 @@ class MineseeperCells extends Component {
     // }
     return (
       <div style={styles.cells}>
-        <span>MineseeperCells will be rendered here.</span>
+        {boardNodes}
       </div>
     );
   }
+}
+
+MinesweeperBoard.propTypes = {
+  gameId: React.PropTypes.number.isRequired,
+  level: React.PropTypes.string.isRequired,
+  width: React.PropTypes.number,
+  height: React.PropTypes.number,
+  mines: React.PropTypes.number
+};
+
+MinesweeperBoard.cellTypes = {
+  hidden: '0',
+  notMarked: '01',
+  flagged: '0f',
+  uncertain: '0h',
+  open: '1',
+  vacant: '10',
+  mine: '09',
+  explosion: '1a',
+  mistake: '1b'
+}
+
+MinesweeperBoard.flagTypes = {
+  hasMine: 1,
+  hasFlag: 2
 }
 
 export class Minesweeper extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      gameId: 1,
       running: false,
-      remain: 10
+      remain: 0
     };
     // event binding
-    this.handleRestart = this.handleRestart.bind(this)
+    this.handleStart = this.handleStart.bind(this)
+    this.handleStop = this.handleStop.bind(this)
+    this.handleRemainChange = this.handleRemainChange.bind(this)
+    this.handleRetry = this.handleRetry.bind(this)
   }
-  handleRestart() {
-    this.setState({running: !this.state.running});
+  handleStart() {
+    this.setState({running: true});
+  }
+  handleStop() {
+    this.setState({running: false});
+  }
+  handleRemainChange(value) {
+    this.setState({remain: value});
+  }
+  handleRetry() {
+    this.setState({gameId: this.state.gameId + 1});
   }
   render() {
     return (
@@ -176,14 +289,30 @@ export class Minesweeper extends Component {
           <MinesweeperRemain value={this.state.remain}/>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <MinesweeperTimer interval="1s" limit={999} running={this.state.running}/>
-          <MineseeperCells/>
+          <MinesweeperBoard
+            gameId={this.state.gameId}
+            level={this.props.level}
+            width={this.props.width}
+            height={this.props.height}
+            mines={this.props.mines}
+            onStart={this.handleStart}
+            onStop={this.handleStop}
+            onRemainChange={this.handleRemainChange}
+          />
           <button
             type="button"
             style={styles.restart}
-            onClick={this.handleRestart}
-            >Restart</button>
+            onClick={this.handleRetry}
+            >Retry</button>
         </nobr>
       </form>
     );
   }
 }
+
+Minesweeper.propTypes = {
+  level: React.PropTypes.string.isRequired,
+  width: React.PropTypes.number,
+  height: React.PropTypes.number,
+  mines: React.PropTypes.number
+};
