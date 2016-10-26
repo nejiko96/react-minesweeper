@@ -49,7 +49,7 @@ const styles = {
     '18': cellStyle(2, 3),
     '19': cellStyle(0, 4),
     '1a': cellStyle(1, 4),
-    '1b': cellStyle(2, 4),
+    '1b': cellStyle(2, 4)
   },
   restart: {}
 };
@@ -71,23 +71,23 @@ class MinesweeperTimer extends Component {
     super(props);
     this.state = {count: 0};
     // event binding
-    this.timeParse = this.timeParse.bind(this)
-    this.start = this.start.bind(this)
-    this.update = this.update.bind(this)
-    this.stop = this.stop.bind(this)
+    this.timeParse = this.timeParse.bind(this);
+    this.start = this.start.bind(this);
+    this.update = this.update.bind(this);
+    this.stop = this.stop.bind(this);
   }
   timeParse(value) {
     const powers = {
-      'ms': 1,
-      's': 1000
-    }
+      ms: 1,
+      s: 1000
+    };
     if (value === undefined || value === null) {
       return null;
     }
-    let result = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/.exec(value.toString().trim());
+    const result = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/.exec(value.toString().trim());
     if (result[2]) {
-      let num = parseFloat(result[1]);
-      let mult = powers[result[2]] || 1;
+      const num = parseFloat(result[1]);
+      const mult = powers[result[2]] || 1;
       return num * mult;
     }
     return value;
@@ -136,19 +136,19 @@ class MinesweeperBoard extends Component {
   defaultSize(level) {
     return {
       easy: {
-        width:   9,
-        height:  9,
-        mines:  10
+        width: 9,
+        height: 9,
+        mines: 10
       },
       medium: {
-        width:  16,
+        width: 16,
         height: 16,
-        mines:  40
+        mines: 40
       },
       hard: {
-        width:  30,
+        width: 30,
         height: 16,
-        mines:  99
+        mines: 99
       }
     }[level];
   }
@@ -163,7 +163,7 @@ class MinesweeperBoard extends Component {
       width: w,
       height: h,
       mines: m
-    }
+    };
   }
   inRange(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -176,7 +176,7 @@ class MinesweeperBoard extends Component {
     return Math.round(n * percent / 1000) * 10;
   }
   fillArray2D(w, h, value) {
-    return Array.apply(null, Array(h)).map(function() { return Array(w).fill(value); });
+    return Array.apply(null, Array(h)).map(() => Array(w).fill(value));
   }
   init(props) {
     const size = this.defaultSize(props.level) || this.customSize(props);
@@ -187,7 +187,7 @@ class MinesweeperBoard extends Component {
       cells: this.fillArray2D(w, h, MinesweeperBoard.cellTypes.notMarked),
       flags: this.fillArray2D(w, h, 0)
     };
-    return Object.assign({},size, other);
+    return Object.assign({}, size, other);
   }
   startGame() {
     this.props.onStart();
@@ -198,16 +198,19 @@ class MinesweeperBoard extends Component {
   constructor(props) {
     super(props);
     this.state = this.init(props);
+    this.startGame = this.startGame.bind(this);
+    this.stopGame = this.startGame.bind(this);
   }
   componentDidMount() {
     this.props.onRemainChange(this.state.remain);
   }
   render() {
-    const boardNodes = this.state.cells.map(function(row) {
-      const rowNodes = row.map(function(cell) {
-        return (<span style={styles.cell[cell]}></span>);
+    const boardNodes = this.state.cells.map((row, i) => {
+      const rowNodes = row.map((cell, j) => {
+        const key = `${i}_${j}`;
+        return (<span key={key} style={styles.cell[cell]}></span>);
       });
-      rowNodes.push(<br />);
+      rowNodes.push(<br/>);
       return rowNodes;
     });
     return (
@@ -223,7 +226,10 @@ MinesweeperBoard.propTypes = {
   level: React.PropTypes.string.isRequired,
   width: React.PropTypes.number,
   height: React.PropTypes.number,
-  mines: React.PropTypes.number
+  mines: React.PropTypes.number,
+  onStart: React.PropTypes.func,
+  onStop: React.PropTypes.func,
+  onRemainChange: React.PropTypes.func
 };
 
 MinesweeperBoard.cellTypes = {
@@ -236,12 +242,12 @@ MinesweeperBoard.cellTypes = {
   mine: '09',
   explosion: '1a',
   mistake: '1b'
-}
+};
 
 MinesweeperBoard.flagTypes = {
   hasMine: 1,
   hasFlag: 2
-}
+};
 
 export class Minesweeper extends Component {
   constructor(props) {
@@ -252,10 +258,10 @@ export class Minesweeper extends Component {
       remain: 0
     };
     // event binding
-    this.handleStart = this.handleStart.bind(this)
-    this.handleStop = this.handleStop.bind(this)
-    this.handleRemainChange = this.handleRemainChange.bind(this)
-    this.handleRetry = this.handleRetry.bind(this)
+    this.handleStart = this.handleStart.bind(this);
+    this.handleStop = this.handleStop.bind(this);
+    this.handleRemainChange = this.handleRemainChange.bind(this);
+    this.handleRetry = this.handleRetry.bind(this);
   }
   handleStart() {
     this.setState({running: true});
@@ -285,7 +291,7 @@ export class Minesweeper extends Component {
             onStart={this.handleStart}
             onStop={this.handleStop}
             onRemainChange={this.handleRemainChange}
-          />
+            />
           <button
             type="button"
             style={styles.restart}
