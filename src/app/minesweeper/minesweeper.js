@@ -160,7 +160,7 @@ class MinesweeperBoard extends Component {
       this.inRange(props.mines, 10, this.maxMines(n)) :
       this.defaultMines(n);
     return {
-      witdh: w,
+      width: w,
       height: h,
       mines: m
     }
@@ -180,7 +180,6 @@ class MinesweeperBoard extends Component {
   }
   init(props) {
     const size = this.defaultSize(props.level) || this.customSize(props);
-    console.log(size);
     const w = size.width;
     const h = size.height;
     const other = {
@@ -204,25 +203,13 @@ class MinesweeperBoard extends Component {
     this.props.onRemainChange(this.state.remain);
   }
   render() {
-    console.log(this.state.cells);
     const boardNodes = this.state.cells.map(function(row) {
       const rowNodes = row.map(function(cell) {
-        return (
-          <span style={styles.cell[cell]}></span>
-        );
+        return (<span style={styles.cell[cell]}></span>);
       });
-      return (
-        <div>
-          {rowNodes}<br />
-        </div>
-      );
+      rowNodes.push(<br />);
+      return rowNodes;
     });
-    // for (idx = 0; idx < this._cells; idx++) {
-    //   if (idx > 0 && idx % this._width === 0) {
-    //     html += '<br />';
-    //   }
-    //   html += '<span></span>';
-    // }
     return (
       <div style={styles.cells}>
         {boardNodes}
