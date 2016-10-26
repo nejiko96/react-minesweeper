@@ -25,7 +25,7 @@ export class Main extends Component {
         <Header/>
         <main style={styles.main}>
           <Title/>
-          <Minesweeper level="easy"/>
+          <Minesweeper/>
           <Techs/>
         </main>
         <Footer/>

@@ -279,12 +279,12 @@ export class Minesweeper extends Component {
     return (
       <form>
         <nobr>
-          <MinesweeperRemain value={this.state.remain}/>
+          <MinesweeperRemain value={this.state.remain}/>mines
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <MinesweeperTimer interval="1s" limit={999} running={this.state.running}/>
+          time : <MinesweeperTimer interval="1s" limit={999} running={this.state.running}/>
           <MinesweeperBoard
             gameId={this.state.gameId}
-            level={this.props.level}
+            level={this.props.level || 'easy'}
             width={this.props.width}
             height={this.props.height}
             mines={this.props.mines}
@@ -304,7 +304,7 @@ export class Minesweeper extends Component {
 }
 
 Minesweeper.propTypes = {
-  level: React.PropTypes.string.isRequired,
+  level: React.PropTypes.string,
   width: React.PropTypes.number,
   height: React.PropTypes.number,
   mines: React.PropTypes.number
