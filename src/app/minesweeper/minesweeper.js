@@ -226,11 +226,30 @@ class CellState {
     this.flags = Cell.f.hidden;
     this.subFlags = 0;
   }
-  press () {
+  press() {
     this.subFlags |= Cell.s.pressed;
   }
   release() {
     this.subFlags &= ~Cell.s.pressed;
+  }
+  open(force) {
+    // already open
+    if (!(this.flags & Cell.f.hidden)) {
+      return 0;
+    }
+    // marked & on normal open
+    if (this.flags & Cell.f.marked && !force) {
+      return 0;
+    }
+    // open
+    this.flags &= ~Cell.f.hidden;
+    // there is a mine
+    if (this.flags & Cell.f.mine) {
+      // explode on normal open
+      if (!force) { this.subFlag |= Cell.s.explode }
+      return 2;
+    }
+    return 1;
   }
 }
 
@@ -320,19 +339,29 @@ class Board extends Component {
       )
     };
   }
-  startGame() {
+  startGame(i, j) {
+    this.generateMine(i, j);
     this.props.onStart();
   }
   stopGame() {
     this.listener = Listener.noop;
     this.props.onStop();
   }
+  generateMine(i, j) {
+
+  }
+  open(i, j, force) {
+    const result = this.state.cells[i][j].open();
+  }
   constructor(props) {
     super(props);
     this.state = this.init(props);
+    this.minePos = null;
     // event binding
     this.startGame = this.startGame.bind(this);
     this.stopGame = this.startGame.bind(this);
+    this.generateMine = this.generateMine.bind(this);
+    this.open = this.open.bind(this);
     this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
     this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
     this.handleLeftMouseOver = this.handleLeftMouseOver.bind(this);
@@ -366,13 +395,7 @@ class Board extends Component {
     );
   }
   handleLeftMouseDown(i, j) {
-    console.log(`LeftMouseDown(${i}, ${j})`);
     this.state.cells[i][j].press();
-    this.setState({cells: this.state.cells});
-  }
-  handleLeftMouseUp(i, j) {
-    console.log(`LeftMouseUp(${i}, ${j})`);
-    this.state.cells[i][j].release();
     this.setState({cells: this.state.cells});
   }
   handleLeftMouseOver(i, j) {
@@ -381,8 +404,15 @@ class Board extends Component {
     this.setState({cells: this.state.cells});
   }
   handleLeftMouseOut(i, j) {
-    console.log(`LeftMouseOut(${i}, ${j})`);
     this.state.cells[i][j].release();
+    this.setState({cells: this.state.cells});
+  }
+  handleLeftMouseUp(i, j) {
+    this.state.cells[i][j].release();
+    if (!this.minePos) {
+      this.startGame(i, j);
+    }
+    this.open(i, j, false);
     this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
