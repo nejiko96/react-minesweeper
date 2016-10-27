@@ -109,7 +109,8 @@ const settings = {
 
 const utils = {
   getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
-  fillArray2D: (w, h, value) => Array.apply(null, Array(h)).map(() => Array(w).fill(value))
+  fillArray2D: (w, h, value) => Array.apply(null, Array(h)).map(() => Array(w).fill(value)),
+  noop: () => {}
 };
 
 class MinesweeperRemain extends Component {
@@ -131,12 +132,9 @@ class MinesweeperTimer extends Component {
       s: 1000
     };
     const result = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/.exec(value.trim());
-    if (result[2]) {
-      const num = parseFloat(result[1]);
-      const mult = powers[result[2]] || 1;
-      return num * mult;
-    }
-    return value;
+    const num = parseFloat(result[1]) || 1000;
+    const mult = result[2] && powers[result[2]] || 1;
+    return num * mult;
   }
   start() {
     this.setState({count: 0});
@@ -187,6 +185,32 @@ MinesweeperTimer.propTypes = {
   running: React.PropTypes.bool.isRequired
 };
 
+
+class MinesweeperListener {
+  constructor(game) {
+    this.game = game;
+  }
+  handleMouseDown(ev, i, j) {
+    console.log(`handleMouseDown(${i}, ${j})`);
+  }
+  handleMouseUp(ev, i, j) {
+    console.log(`handleMouseUp(${i}, ${j})`);
+  }
+  handleMouseOver(ev, i, j) {
+    console.log(`handleMouseOver(${i}, ${j})`);
+  }
+  handleMouseOut(ev, i, j) {
+    console.log(`handleMouseOut(${i}, ${j})`);
+  }
+}
+
+MinesweeperListener.noop = {
+  handleMouseDown: utils.noop,
+  handleMouseUp: utils.noop,
+  handleMouseOver: utils.noop,
+  handleMouseOut: utils.noop
+}
+
 class MinesweeperBoard extends Component {
   defaultSize(level) {
     return settings.levels[level];
@@ -216,6 +240,7 @@ class MinesweeperBoard extends Component {
     this.props.onStart();
   }
   stopGame() {
+    this.listener = MinesweeperListener.noop;
     this.props.onStop();
   }
   constructor(props) {
@@ -224,12 +249,14 @@ class MinesweeperBoard extends Component {
     // event binding
     this.startGame = this.startGame.bind(this);
     this.stopGame = this.startGame.bind(this);
-    this.handleMouseDown = this.handleMouseDown.bind(this);
-    this.handleMouseUp = this.handleMouseUp.bind(this);
-    this.handleMouseOver = this.handleMouseOver.bind(this);
-    this.handleMouseOut = this.handleMouseOut.bind(this);
+    // this.handleMouseDown = this.handleMouseDown.bind(this);
+    // this.handleMouseUp = this.handleMouseUp.bind(this);
+    // this.handleMouseOver = this.handleMouseOver.bind(this);
+    // this.handleMouseOut = this.handleMouseOut.bind(this);
   }
   componentDidMount() {
+    this.listener = new MinesweeperListener(this);
+    // this.listener = MinesweeperListener.noop;
     this.props.onRemainChange(this.state.remain);
   }
   render() {
@@ -240,10 +267,10 @@ class MinesweeperBoard extends Component {
           <span
             key={key}
             style={styles.cell[cell]}
-            onMouseDown={() => this.handleMouseDown(i, j)}
-            onMouseUp={() => this.handleMouseUp(i, j)}
-            onMouseOver={() => this.handleMouseOver(i, j)}
-            onMouseOut={() => this.handleMouseOut(i, j)}
+            onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
+            onMouseUp={(ev) => this.listener.handleMouseUp(ev, i, j)}
+            onMouseOver={(ev) => this.listener.handleMouseOver(ev, i, j)}
+            onMouseOut={(ev) => this.listener.handleMouseOut(ev, i, j)}
             />);
       });
       rowNodes.push(<br/>);
@@ -255,18 +282,7 @@ class MinesweeperBoard extends Component {
       </div>
     );
   }
-  handleMouseDown(i, j) {
-    console.log(`handleMouseDown(${i}, ${j})`);
-  }
-  handleMouseUp(i, j) {
-    console.log(`handleMouseUp(${i}, ${j})`);
-  }
-  handleMouseOver(i, j) {
-    console.log(`handleMouseOver(${i}, ${j})`);
-  }
-  handleMouseOut(i, j) {
-    console.log(`handleMouseOut(${i}, ${j})`);
-  }
+
 }
 
 MinesweeperBoard.propTypes = {
