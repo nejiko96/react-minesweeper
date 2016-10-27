@@ -35,23 +35,7 @@ const styles = {
   cells: {
     lineHeight: 0
   },
-  cell: {
-    '00': cellStyle(0, 0),
-    '01': cellStyle(1, 0),
-    '02': cellStyle(2, 0),
-    '10': cellStyle(0, 1),
-    '11': cellStyle(1, 1),
-    '12': cellStyle(2, 1),
-    '13': cellStyle(0, 2),
-    '14': cellStyle(1, 2),
-    '15': cellStyle(2, 2),
-    '16': cellStyle(0, 3),
-    '17': cellStyle(1, 3),
-    '18': cellStyle(2, 3),
-    '20': cellStyle(0, 4),
-    '21': cellStyle(1, 4),
-    '22': cellStyle(2, 4)
-  },
+  cell: Array.apply(null, Array(15)).map((v, i) => cellStyle(i % 3, i / 3)),
   restart: {}
 };
 
@@ -240,14 +224,14 @@ Listener.noop = {
 class Cell {
   static get styleKeys() {
     return {
-      hidden: '00',
-      marked: '01',
-      uncertain: '02',
-      vacant: '10',
-      open: '1',
-      mine: '20',
-      explosion: '21',
-      mistake: '22'
+      hidden: 0,
+      marked: 1,
+      uncertain: 2,
+      pressed: 3,
+      open: 3,
+      mine: 12,
+      explosion: 13,
+      mistake: 14
     };
   }
   static get f() {
@@ -257,16 +241,7 @@ class Cell {
       marked: 4,
     };
   }
-  constructor() {
-    this.flags = 0;
-    this.hint = 0;
-    this.options = {
-      pressed: false,
-      uncertain: false,
-      explode: false
-    };
-  }
-  get styleKey() {
+  styleKey() {
     if (this.flags === Cell.f.open & Cell.f.marked) {
       return Cell.styleKeys.mistake;
     }
@@ -275,7 +250,7 @@ class Cell {
     }
     if (!(this.flags & Cell.f.open)) {
       if (this.options.pressed) {
-        return Cell.styleKeys.vacant;
+        return Cell.styleKeys.pressed;
       }
       if (this.options.uncertain) {
         return Cell.styleKeys.uncertain;
@@ -287,10 +262,24 @@ class Cell {
     }
     return Cell.styleKeys.open + this.hint;
   }
+  press () {
+    this.options.pressed = true;
+  }
+  release() {
+    this.options.pressed = false;
+  }
+  constructor() {
+    this.flags = 0;
+    this.hint = 0;
+    this.options = {
+      pressed: false,
+      uncertain: false,
+      explode: false
+    };
+  }
 }
 
 class Board extends Component {
-
   init(props) {
     return {
       remain: props.mines,
@@ -300,10 +289,6 @@ class Board extends Component {
         )
       )
     };
-    return Object.assign({}, size, other);
-  }
-  isFixed(i, j) {
-    this.state[i][j]
   }
   startGame() {
     this.props.onStart();
@@ -318,10 +303,10 @@ class Board extends Component {
     // event binding
     this.startGame = this.startGame.bind(this);
     this.stopGame = this.startGame.bind(this);
-    // this.handleMouseDown = this.handleMouseDown.bind(this);
-    // this.handleMouseUp = this.handleMouseUp.bind(this);
-    // this.handleMouseOver = this.handleMouseOver.bind(this);
-    // this.handleMouseOut = this.handleMouseOut.bind(this);
+    this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
+    this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
+    this.handleLeftMouseOver = this.handleLeftMouseOver.bind(this);
+    this.handleLeftMouseOut = this.handleLeftMouseOut.bind(this);
   }
   componentDidMount() {
     this.listener = new Listener(this);
@@ -333,7 +318,7 @@ class Board extends Component {
         return (
           <span
             key={key}
-            style={styles.cell[cell.styleKey]}
+            style={styles.cell[cell.styleKey()]}
             onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
             onMouseOver={() => this.listener.handleMouseOver(i, j)}
@@ -351,9 +336,23 @@ class Board extends Component {
   }
   handleLeftMouseDown(i, j) {
     console.log(`LeftMouseDown(${i}, ${j})`);
+    this.state.cells[i][j].press();
+    this.setState({cells: this.state.cells});
   }
   handleLeftMouseUp(i, j) {
     console.log(`LeftMouseUp(${i}, ${j})`);
+    this.state.cells[i][j].release();
+    this.setState({cells: this.state.cells});
+  }
+  handleLeftMouseOver(i, j) {
+    console.log(`LeftMouseOver(${i}, ${j})`);
+    this.state.cells[i][j].press();
+    this.setState({cells: this.state.cells});
+  }
+  handleLeftMouseOut(i, j) {
+    console.log(`LeftMouseOut(${i}, ${j})`);
+    this.state.cells[i][j].release();
+    this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
     console.log(`RightMouseDown(${i}, ${j})`);
@@ -419,7 +418,7 @@ export class Minesweeper extends Component {
     };
   }
   defaultSize(level) {
-    return Minesweeper.settings.levels[level || 'easy'];
+    return Minesweeper.settings.levels[level];
   }
   customSize(props) {
     const w = utils.getProperty(props.width, Minesweeper.settings.width);
@@ -510,3 +509,5 @@ Minesweeper.propTypes = {
   height: React.PropTypes.number,
   mines: React.PropTypes.number
 };
+
+Minesweeper.defaultProps = {level: 'easy'};
