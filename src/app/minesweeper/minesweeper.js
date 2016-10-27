@@ -36,9 +36,9 @@ const styles = {
     lineHeight: 0
   },
   cell: {
-    '01': cellStyle(0, 0),
-    '0f': cellStyle(1, 0),
-    '0h': cellStyle(2, 0),
+    '00': cellStyle(0, 0),
+    '01': cellStyle(1, 0),
+    '02': cellStyle(2, 0),
     '10': cellStyle(0, 1),
     '11': cellStyle(1, 1),
     '12': cellStyle(2, 1),
@@ -48,9 +48,9 @@ const styles = {
     '16': cellStyle(0, 3),
     '17': cellStyle(1, 3),
     '18': cellStyle(2, 3),
-    '19': cellStyle(0, 4),
-    '1a': cellStyle(1, 4),
-    '1b': cellStyle(2, 4)
+    '20': cellStyle(0, 4),
+    '21': cellStyle(1, 4),
+    '22': cellStyle(2, 4)
   },
   restart: {}
 };
@@ -237,35 +237,73 @@ Listener.noop = {
   handleMouseOut: utils.noop
 }
 
-class Board extends Component {
-  static get cellTypes() {
+class Cell {
+  static get styleKeys() {
     return {
-      hidden: '0',
-      notMarked: '01',
-      flagged: '0f',
-      uncertain: '0h',
-      open: '1',
+      hidden: '00',
+      marked: '01',
+      uncertain: '02',
       vacant: '10',
-      mine: '09',
-      explosion: '1a',
-      mistake: '1b'
+      open: '1',
+      mine: '20',
+      explosion: '21',
+      mistake: '22'
     };
   }
-  static get flagTypes() {
+  static get f() {
     return {
-      hasMine: 1,
-      hasFlag: 2
+      open: 1,
+      mine: 2,
+      marked: 4,
     };
   }
+  constructor() {
+    this.flags = 0;
+    this.hint = 0;
+    this.options = {
+      pressed: false,
+      uncertain: false,
+      explode: false
+    };
+  }
+  get styleKey() {
+    if (this.flags === Cell.f.open & Cell.f.marked) {
+      return Cell.styleKeys.mistake;
+    }
+    if (this.flags & Cell.f.marked) {
+      return Cell.styleKeys.marked;
+    }
+    if (!(this.flags & Cell.f.open)) {
+      if (this.options.pressed) {
+        return Cell.styleKeys.vacant;
+      }
+      if (this.options.uncertain) {
+        return Cell.styleKeys.uncertain;
+      }
+      return Cell.styleKeys.hidden;
+    }
+    if (this.flags & Cell.f.mine) {
+      return this.options.explode ? Cell.styleKeys.explosion : Cell.styleKeys.mine;
+    }
+    return Cell.styleKeys.open + this.hint;
+  }
+}
+
+class Board extends Component {
+
   init(props) {
-    const w = props.width;
-    const h = props.height;
     return {
       remain: props.mines,
-      cells: utils.fillArray2D(w, h, Board.cellTypes.notMarked),
-      flags: utils.fillArray2D(w, h, 0)
+      cells: Array.apply(null, Array(props.height)).map(
+        () => Array.apply(null, Array(props.width)).map(
+          () => new Cell()
+        )
+      )
     };
     return Object.assign({}, size, other);
+  }
+  isFixed(i, j) {
+    this.state[i][j]
   }
   startGame() {
     this.props.onStart();
@@ -295,7 +333,7 @@ class Board extends Component {
         return (
           <span
             key={key}
-            style={styles.cell[cell]}
+            style={styles.cell[cell.styleKey]}
             onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
             onMouseOver={() => this.listener.handleMouseOver(i, j)}
