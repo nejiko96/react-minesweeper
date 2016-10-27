@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import ReactDOM from 'react-dom';
 
 const cellSize = 32;
 const cellPx = `${cellSize}px`;
@@ -89,22 +90,7 @@ const settings = {
       max: Math.floor(n * 0.94 - 8.45),
       default: Math.round(n * pct / 1000) * 10
     };
-  },
-  cellTypes: {
-    hidden: '0',
-    notMarked: '01',
-    flagged: '0f',
-    uncertain: '0h',
-    open: '1',
-    vacant: '10',
-    mine: '09',
-    explosion: '1a',
-    mistake: '1b'
-  },
-  flagTypes: {
-    hasMine: 1,
-    hasFlag: 2
-  },
+  }
 };
 
 const utils = {
@@ -113,7 +99,7 @@ const utils = {
   noop: () => {}
 };
 
-class MinesweeperRemain extends Component {
+class Remain extends Component {
   render() {
     return (
       <span style={styles.remain} >{this.props.value}</span>
@@ -121,18 +107,18 @@ class MinesweeperRemain extends Component {
   }
 }
 
-MinesweeperRemain.propTypes = {
+Remain.propTypes = {
   value: React.PropTypes.number
 };
 
-class MinesweeperTimer extends Component {
+class Timer extends Component {
   timeParse(value) {
     const powers = {
       ms: 1,
       s: 1000
     };
     const result = /^([0-9]+(?:\.[0-9]*)?)\s*(.*s)?$/.exec(value.trim());
-    const num = parseFloat(result[1]) || 1000;
+    const num = result[1] && parseFloat(result[1]) || 1000;
     const mult = result[2] && powers[result[2]] || 1;
     return num * mult;
   }
@@ -179,39 +165,71 @@ class MinesweeperTimer extends Component {
   }
 }
 
-MinesweeperTimer.propTypes = {
+Timer.propTypes = {
   interval: React.PropTypes.string.isRequired,
   limit: React.PropTypes.number,
   running: React.PropTypes.bool.isRequired
 };
 
-
-class MinesweeperListener {
-  constructor(game) {
-    this.game = game;
+class Listener {
+  static get button() {
+    return {
+      left: 1,
+      right: 2,
+      both: 3
+    };
+  }
+  static get which() {
+    return {
+      left: 1,
+      right: 3
+    };
+  }
+  constructor(target) {
+    this.target = target;
+    this.button
   }
   handleMouseDown(ev, i, j) {
-    console.log(`handleMouseDown(${i}, ${j})`);
+    console.log(`MouseDown(${i}, ${j}) : button=[${ev.button}], which=[${ev.which}]`);
   }
   handleMouseUp(ev, i, j) {
-    console.log(`handleMouseUp(${i}, ${j})`);
+    console.log(`MouseUp(${i}, ${j}) : button=[${ev.button}], which=[${ev.which}]`);
   }
   handleMouseOver(ev, i, j) {
-    console.log(`handleMouseOver(${i}, ${j})`);
+    console.log(`MouseOver(${i}, ${j})`);
   }
   handleMouseOut(ev, i, j) {
-    console.log(`handleMouseOut(${i}, ${j})`);
+    console.log(`MouseOut(${i}, ${j})`);
   }
 }
 
-MinesweeperListener.noop = {
+Listener.noop = {
   handleMouseDown: utils.noop,
   handleMouseUp: utils.noop,
   handleMouseOver: utils.noop,
   handleMouseOut: utils.noop
 }
 
-class MinesweeperBoard extends Component {
+class Board extends Component {
+  static get cellTypes() {
+    return {
+      hidden: '0',
+      notMarked: '01',
+      flagged: '0f',
+      uncertain: '0h',
+      open: '1',
+      vacant: '10',
+      mine: '09',
+      explosion: '1a',
+      mistake: '1b'
+    };
+  }
+  static get flagTypes() {
+    return {
+      hasMine: 1,
+      hasFlag: 2
+    };
+  }
   defaultSize(level) {
     return settings.levels[level];
   }
@@ -231,7 +249,7 @@ class MinesweeperBoard extends Component {
     const h = size.height;
     const other = {
       remain: size.mines,
-      cells: utils.fillArray2D(w, h, settings.cellTypes.notMarked),
+      cells: utils.fillArray2D(w, h, Board.cellTypes.notMarked),
       flags: utils.fillArray2D(w, h, 0)
     };
     return Object.assign({}, size, other);
@@ -240,7 +258,7 @@ class MinesweeperBoard extends Component {
     this.props.onStart();
   }
   stopGame() {
-    this.listener = MinesweeperListener.noop;
+    this.listener = Listener.noop;
     this.props.onStop();
   }
   constructor(props) {
@@ -255,7 +273,7 @@ class MinesweeperBoard extends Component {
     // this.handleMouseOut = this.handleMouseOut.bind(this);
   }
   componentDidMount() {
-    this.listener = new MinesweeperListener(this);
+    this.listener = new Listener(this);
     // this.listener = MinesweeperListener.noop;
     this.props.onRemainChange(this.state.remain);
   }
@@ -285,7 +303,7 @@ class MinesweeperBoard extends Component {
 
 }
 
-MinesweeperBoard.propTypes = {
+Board.propTypes = {
   gameId: React.PropTypes.number.isRequired,
   level: React.PropTypes.string.isRequired,
   width: React.PropTypes.number,
@@ -310,30 +328,40 @@ export class Minesweeper extends Component {
     this.handleRemainChange = this.handleRemainChange.bind(this);
     this.handleRetry = this.handleRetry.bind(this);
   }
+  componentDidMount() {
+    ReactDOM.findDOMNode(this).addEventListener('contextmenu', this.handleContextMenu);
+    ReactDOM.findDOMNode(this).addEventListener('selectstart', this.handleSelectStart);
+  }
+  componentWillUnmount() {
+    ReactDOM.findDOMNode(this).removeEventListener('contextmenu', this.handleContextMenu);
+    ReactDOM.findDOMNode(this).removeEventListener('selectstart', this.handleSelectStart);
+  }
   render() {
     return (
-      <form>
-        <nobr>
-          <MinesweeperRemain value={this.state.remain}/>mines
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          time : <MinesweeperTimer interval="1s" limit={999} running={this.state.running}/>
-          <MinesweeperBoard
-            gameId={this.state.gameId}
-            level={this.props.level || 'easy'}
-            width={this.props.width}
-            height={this.props.height}
-            mines={this.props.mines}
-            onStart={this.handleStart}
-            onStop={this.handleStop}
-            onRemainChange={this.handleRemainChange}
-            />
-          <button
-            type="button"
-            style={styles.restart}
-            onClick={this.handleRetry}
-            >Retry</button>
-        </nobr>
-      </form>
+      <div>
+        <form>
+          <nobr>
+            <Remain value={this.state.remain}/>mines
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            time : <Timer interval="1s" limit={999} running={this.state.running}/>
+            <Board
+              gameId={this.state.gameId}
+              level={this.props.level || 'easy'}
+              width={this.props.width}
+              height={this.props.height}
+              mines={this.props.mines}
+              onStart={this.handleStart}
+              onStop={this.handleStop}
+              onRemainChange={this.handleRemainChange}
+              />
+            <button
+              type="button"
+              style={styles.restart}
+              onClick={this.handleRetry}
+              >Retry</button>
+          </nobr>
+        </form>
+      </div>
     );
   }
   handleStart() {
@@ -347,6 +375,12 @@ export class Minesweeper extends Component {
   }
   handleRetry() {
     this.setState({gameId: this.state.gameId + 1});
+  }
+  handleContextMenu(e) {
+    e.preventDefault();
+  }
+  handleSelectStart(e) {
+    e.preventDefault();
   }
 }
 
