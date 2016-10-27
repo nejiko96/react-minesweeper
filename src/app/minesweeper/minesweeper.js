@@ -221,8 +221,35 @@ Listener.noop = {
   handleMouseOut: utils.noop
 }
 
-class Cell {
-  static get styleKeys() {
+class CellState {
+  constructor() {
+    this.flags = Cell.f.hidden;
+    this.subFlags = 0;
+  }
+  press () {
+    this.subFlags |= Cell.s.pressed;
+  }
+  release() {
+    this.subFlags &= ~Cell.s.pressed;
+  }
+}
+
+class Cell extends Component {
+  static get f() {
+    return {
+      hidden: 1,
+      mine: 2,
+      marked: 4,
+    };
+  }
+  static get s() {
+    return {
+      uncertain: 16,
+      pressed: 32,
+      explode: 64,
+    };
+  }
+  static get style() {
     return {
       hidden: 0,
       marked: 1,
@@ -234,50 +261,53 @@ class Cell {
       mistake: 14
     };
   }
-  static get f() {
-    return {
-      open: 1,
-      mine: 2,
-      marked: 4,
-    };
-  }
-  styleKey() {
-    if (this.flags === Cell.f.open & Cell.f.marked) {
-      return Cell.styleKeys.mistake;
+  styleNo() {
+    const flags = this.props.flags;
+    const subFlags = this.props.subFlags;
+    if (flags === Cell.f.marked) {
+      return Cell.style.mistake;
     }
-    if (this.flags & Cell.f.marked) {
-      return Cell.styleKeys.marked;
+    if (flags & Cell.f.marked) {
+      return Cell.style.marked;
     }
-    if (!(this.flags & Cell.f.open)) {
-      if (this.options.pressed) {
-        return Cell.styleKeys.pressed;
+    if (flags & Cell.f.hidden) {
+      if (subFlags & Cell.s.pressed) {
+        return Cell.style.pressed;
       }
-      if (this.options.uncertain) {
-        return Cell.styleKeys.uncertain;
+      if (subFlags & Cell.s.uncertain) {
+        return Cell.style.uncertain;
       }
-      return Cell.styleKeys.hidden;
+      return Cell.style.hidden;
     }
-    if (this.flags & Cell.f.mine) {
-      return this.options.explode ? Cell.styleKeys.explosion : Cell.styleKeys.mine;
+    if (flags & Cell.f.mine) {
+      return subFlags & Cell.s.explode ? Cell.style.explosion : Cell.style.mine;
     }
-    return Cell.styleKeys.open + this.hint;
+    return Cell.style.open + (subFlags & 15);
   }
-  press () {
-    this.options.pressed = true;
+  constructor(props) {
+    super(props);
+    this.styleNo = this.styleNo.bind(this);
   }
-  release() {
-    this.options.pressed = false;
-  }
-  constructor() {
-    this.flags = 0;
-    this.hint = 0;
-    this.options = {
-      pressed: false,
-      uncertain: false,
-      explode: false
-    };
+  render() {
+    return (
+      <span
+        style={styles.cell[this.styleNo()]}
+        onMouseDown={this.props.onMouseDown}
+        onMouseUp={this.props.onMouseUp}
+        onMouseOver={this.props.onMouseOver}
+        onMouseOut={this.props.onMouseOut}
+        />);
   }
 }
+
+Cell.propTypes = {
+  flags: React.PropTypes.number.isRequired,
+  subFlags: React.PropTypes.number.isRequired,
+  onMouseDown: React.PropTypes.func.isRequired,
+  onMouseUp: React.PropTypes.func.isRequired,
+  onMouseOver: React.PropTypes.func.isRequired,
+  onMouseOut: React.PropTypes.func.isRequired
+};
 
 class Board extends Component {
   init(props) {
@@ -285,7 +315,7 @@ class Board extends Component {
       remain: props.mines,
       cells: Array.apply(null, Array(props.height)).map(
         () => Array.apply(null, Array(props.width)).map(
-          () => new Cell()
+          () => new CellState()
         )
       )
     };
@@ -316,9 +346,10 @@ class Board extends Component {
       const rowNodes = row.map((cell, j) => {
         const key = `${i}_${j}`;
         return (
-          <span
+          <Cell
             key={key}
-            style={styles.cell[cell.styleKey()]}
+            flags={cell.flags}
+            subFlags={cell.subFlags}
             onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
             onMouseOver={() => this.listener.handleMouseOver(i, j)}
