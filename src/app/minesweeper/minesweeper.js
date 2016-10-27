@@ -64,6 +64,13 @@ Remain.propTypes = {
 };
 
 class Timer extends Component {
+  static get status() {
+    return {
+      notStarted: 0,
+      running: 1,
+      stopped: 2
+    };
+  }
   static get powers() {
     return {
       ms: 1,
@@ -77,7 +84,6 @@ class Timer extends Component {
     return num * mult;
   }
   start() {
-    this.setState({count: 0});
     this.intervalID = setInterval(this.update, this.timeParse(this.props.interval));
   }
   update() {
@@ -90,6 +96,10 @@ class Timer extends Component {
     clearInterval(this.intervalID);
     this.intervalID = null;
   }
+  reset() {
+    this.stop();
+    this.setState({count: 0});
+  }
   constructor(props) {
     super(props);
     this.state = {count: 0};
@@ -99,6 +109,7 @@ class Timer extends Component {
     this.start = this.start.bind(this);
     this.update = this.update.bind(this);
     this.stop = this.stop.bind(this);
+    this.reset = this.reset.bind(this);
   }
   componentDidMount() {
     this.props.running && this.start();
@@ -107,8 +118,18 @@ class Timer extends Component {
     this.props.running && this.intervalID && this.stop();
   }
   componentWillReceiveProps(nextProps) {
-    if (this.props.running !== nextProps.running) {
-      nextProps.running ? this.start() : this.stop();
+    if (this.props.status !== nextProps.status) {
+      switch (nextProps.status) {
+        case Timer.status.notStarted:
+          this.reset();
+          break;
+        case Timer.status.running:
+          this.start();
+          break;
+        case Timer.status.stopped:
+          this.stop();
+          break;
+      }
     }
   }
   render() {
@@ -121,8 +142,10 @@ class Timer extends Component {
 Timer.propTypes = {
   interval: React.PropTypes.string.isRequired,
   limit: React.PropTypes.number,
-  running: React.PropTypes.bool.isRequired
+  status: React.PropTypes.number.isRequired
 };
+
+Timer.defaultProps = {limit: 0};
 
 class Listener {
   static get event() {
@@ -331,35 +354,40 @@ Cell.propTypes = {
 class Board extends Component {
   init(props) {
     return {
-      remain: props.mines,
       cells: Array.apply(null, Array(props.height)).map(
         () => Array.apply(null, Array(props.width)).map(
           () => new CellState()
         )
-      )
+      ),
+      minePos: [],
+      markPos: []
     };
   }
   startGame(i, j) {
-    this.generateMine(i, j);
+    this.setState({minePos: this.generateMine(i, j)});
     this.props.onStart();
   }
   stopGame() {
     this.listener = Listener.noop;
     this.props.onStop();
   }
+  resetGame() {
+    this.setState(this.init(this.props));
+    this.listener = new Listener(this);
+  }
   generateMine(i, j) {
-
+    return [[0, 0]];
   }
   open(i, j, force) {
-    const result = this.state.cells[i][j].open();
+    const result = this.state.cells[i][j].open(force);
   }
   constructor(props) {
     super(props);
     this.state = this.init(props);
-    this.minePos = null;
     // event binding
     this.startGame = this.startGame.bind(this);
     this.stopGame = this.startGame.bind(this);
+    this.resetGame = this.resetGame.bind(this);
     this.generateMine = this.generateMine.bind(this);
     this.open = this.open.bind(this);
     this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
@@ -369,6 +397,11 @@ class Board extends Component {
   }
   componentDidMount() {
     this.listener = new Listener(this);
+  }
+  componentWillReceiveProps(nextProps) {
+    if (this.props.gameId !== nextProps.gameId) {
+      this.resetGame();
+    }
   }
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
@@ -409,7 +442,7 @@ class Board extends Component {
   }
   handleLeftMouseUp(i, j) {
     this.state.cells[i][j].release();
-    if (!this.minePos) {
+    if (this.state.minePos.length === 0) {
       this.startGame(i, j);
     }
     this.open(i, j, false);
@@ -495,7 +528,7 @@ export class Minesweeper extends Component {
     const size = this.defaultSize(props.level) || this.customSize(props);
     const other = {
       gameId: 1,
-      running: false,
+      timerStatus: Timer.status.notStarted,
       remain: size.mines
     };
     return Object.assign({}, size, other);
@@ -524,7 +557,7 @@ export class Minesweeper extends Component {
           <nobr>
             <Remain value={this.state.remain}/>mines
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            time : <Timer interval="1s" limit={999} running={this.state.running}/>
+            time : <Timer interval="1s" limit={999} status={this.state.timerStatus}/>
             <Board
               gameId={this.state.gameId}
               width={this.state.width}
@@ -545,16 +578,20 @@ export class Minesweeper extends Component {
     );
   }
   handleStart() {
-    this.setState({running: true});
+    this.setState({timerStatus: Timer.status.running});
   }
   handleStop() {
-    this.setState({running: false});
+    this.setState({timerStatus: Timer.status.stopped});
   }
-  handleBoardChange(value) {
-    this.setState({remain: value});
+  handleBoardChange(board) {
+    this.setState({remain: board.state.mines - board.state.markPos.length});
   }
   handleRetry() {
-    this.setState({gameId: this.state.gameId + 1});
+    this.setState({
+      gameId: this.state.gameId + 1,
+      timerStatus: Timer.status.notStarted,
+      remain: this.state.mines
+    });
   }
   handleContextMenu(e) {
     e.preventDefault();
