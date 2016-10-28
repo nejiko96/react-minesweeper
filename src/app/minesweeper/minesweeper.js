@@ -426,19 +426,19 @@ class Board extends Component {
   generateMines(i, j) {
     const w = this.props.width;
     const h = this.props.height;
-    let excludes = this.neighbors(i, j)
-      .map(([i2, j2]) => i2 * w + j2);
     let tgts = utils.fillArray(w * h, (k) => k)
-      .filter(k => {
-        if (k === excludes[0]) {
-          excludes.shift();
-          return false;
-        }
-        return true;
-      });
+    let t = tgts.length;
+    let excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
+    let e = excludes.length;
+    while(e--) {
+      t--;
+      const k = excludes[e];
+      const tmp = tgts[k];
+      tgts[k] = tgts[t];
+      tgts[t] = tmp;
+    }
     const result = new Set();
     let m = this.props.mines;
-    let t = tgts.length;
     while(m--) {
       const k = Math.floor(Math.random() * t--);
       const tmp = tgts[k];
