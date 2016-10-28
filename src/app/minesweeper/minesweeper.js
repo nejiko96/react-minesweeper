@@ -41,7 +41,11 @@ const styles = {
 
 const utils = {
   getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
-  fillArray2D: (w, h, value) => Array.apply(null, Array(h)).map(() => Array(w).fill(value)),
+  fillArray2D: (w, h, fn) => Array.apply(null, Array(h)).map(
+    (_, i) => Array.apply(null, Array(w)).map(
+      (_, j) => fn(i, j)
+    )
+  ),
   noop: () => {},
   addEventListener: (cmp, event, fn) => {
     ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
@@ -250,26 +254,26 @@ class CellState {
     this.subFlags = 0;
   }
   press() {
-    this.subFlags |= Cell.s.pressed;
+    this.subFlags |= Cell.sf.pressed;
   }
   release() {
-    this.subFlags &= ~Cell.s.pressed;
+    this.subFlags &= ~Cell.sf.pressed;
   }
-  open(force) {
+  open(byClick) {
     // already open
     if (!(this.flags & Cell.f.hidden)) {
       return 0;
     }
-    // marked & on normal open
-    if (this.flags & Cell.f.marked && !force) {
+    // marked & click open
+    if (this.flags & Cell.f.marked && byClick) {
       return 0;
     }
     // open
     this.flags &= ~Cell.f.hidden;
-    // there is a mine
+    // if mine exists
     if (this.flags & Cell.f.mine) {
-      // explode on normal open
-      if (!force) { this.subFlag |= Cell.s.explode }
+      // explode on click open
+      if (byClick) { this.subFlag |= Cell.sf.explode }
       return 2;
     }
     return 1;
@@ -284,18 +288,19 @@ class Cell extends Component {
       marked: 4,
     };
   }
-  static get s() {
+  static get sf() {
     return {
-      uncertain: 16,
-      pressed: 32,
-      explode: 64,
+      hint: 15,
+      pending: 16,
+      explode: 32,
+      pressed: 64
     };
   }
   static get style() {
     return {
       hidden: 0,
       marked: 1,
-      uncertain: 2,
+      pending: 2,
       pressed: 3,
       open: 3,
       mine: 12,
@@ -313,18 +318,18 @@ class Cell extends Component {
       return Cell.style.marked;
     }
     if (flags & Cell.f.hidden) {
-      if (subFlags & Cell.s.pressed) {
+      if (subFlags & Cell.sf.pressed) {
         return Cell.style.pressed;
       }
-      if (subFlags & Cell.s.uncertain) {
-        return Cell.style.uncertain;
+      if (subFlags & Cell.sf.pending) {
+        return Cell.style.pending;
       }
       return Cell.style.hidden;
     }
     if (flags & Cell.f.mine) {
-      return subFlags & Cell.s.explode ? Cell.style.explosion : Cell.style.mine;
+      return subFlags & Cell.sf.explode ? Cell.style.explosion : Cell.style.mine;
     }
-    return Cell.style.open + (subFlags & 15);
+    return Cell.style.open + (subFlags & Cell.sf.hint);
   }
   constructor(props) {
     super(props);
@@ -354,11 +359,7 @@ Cell.propTypes = {
 class Board extends Component {
   init(props) {
     return {
-      cells: Array.apply(null, Array(props.height)).map(
-        () => Array.apply(null, Array(props.width)).map(
-          () => new CellState()
-        )
-      ),
+      cells: utils.fillArray2D(props.width, props.height, () => new CellState()),
       minePos: [],
       markPos: []
     };
@@ -378,8 +379,8 @@ class Board extends Component {
   generateMine(i, j) {
     return [[0, 0]];
   }
-  open(i, j, force) {
-    const result = this.state.cells[i][j].open(force);
+  open(i, j, byClick) {
+    const result = this.state.cells[i][j].open(byClick);
   }
   constructor(props) {
     super(props);
@@ -445,7 +446,7 @@ class Board extends Component {
     if (this.state.minePos.length === 0) {
       this.startGame(i, j);
     }
-    this.open(i, j, false);
+    this.open(i, j, true);
     this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
