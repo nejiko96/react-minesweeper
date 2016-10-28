@@ -416,10 +416,7 @@ class Board extends Component {
       const [i, j] = JSON.parse(pos);
       this.state.cells[i][j].putMine();
     });
-    this.setState({
-      cells: this.state.cells,
-      minePos: this.state.minePos
-    });
+    this.setState({minePos: this.state.minePos});
   }
   toggleMarked(i, j) {
     const result = this.state.cells[i][j].toggleMarked();
@@ -435,9 +432,7 @@ class Board extends Component {
         this.state.markPos.delete(pos);
         break;
     }
-    this.setState({
-      markPos: this.state.markPos
-    });
+    this.setState({markPos: this.state.markPos});
     this.props.onChange(this.state);
   }
   open(i, j) {
@@ -492,7 +487,7 @@ class Board extends Component {
     this.state = this.init(props);
     // event binding
     this.startGame = this.startGame.bind(this);
-    this.stopGame = this.startGame.bind(this);
+    this.stopGame = this.stopGame.bind(this);
     this.resetGame = this.resetGame.bind(this);
     this.generateMines = this.generateMines.bind(this);
     this.toggleMarked = this.toggleMarked.bind(this);
@@ -568,7 +563,8 @@ class Board extends Component {
   }
   handleBothMouseUp(i, j) {
     console.log(`BothMouseUp(${i}, ${j})`);
-  }}
+  }
+}
 
 Board.propTypes = {
   gameId: React.PropTypes.number.isRequired,
