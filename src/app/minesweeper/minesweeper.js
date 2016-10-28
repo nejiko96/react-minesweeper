@@ -321,7 +321,7 @@ class CellValue {
   release() {
     this.subFlags &= ~CellValue.sf.pressed;
   }
-  toggleMarked() {
+  toggleMark() {
     // already opened
     if (!(this.flags & CellValue.f.hidden)) {
       return CellValue.result.none;
@@ -341,7 +341,7 @@ class CellValue {
     this.flags |= CellValue.f.marked;
     return CellValue.result.marked;
   }
-  forceMarked() {
+  forceMark() {
     this.subFlags &= ~CellValue.sf.pending;
     this.flags |= CellValue.f.marked;
   }
@@ -451,8 +451,8 @@ class Board extends Component {
     this.state.minePos = result;
     this.setState({minePos: this.state.minePos});
   }
-  toggleMarked(i, j) {
-    const result = this.state.cells[i][j].toggleMarked();
+  toggleMark(i, j) {
+    const result = this.state.cells[i][j].toggleMark();
     if (result == CellValue.result.none) {
       return;
     }
@@ -485,7 +485,7 @@ class Board extends Component {
       }
     });
     this.state.cells[i][j].setHint(hint);
-    if (hint !== 0) {
+    if (hint > 0) {
       return;
     }
     surr.forEach(([i2, j2]) => this.open(i2, j2));
@@ -514,7 +514,7 @@ class Board extends Component {
     this.state.markPos = this.state.minePos;
     this.state.markPos.forEach(pos => {
       const [i, j] = JSON.parse(pos);
-      this.state.cells[i][j].forceMarked();
+      this.state.cells[i][j].forceMark();
     });
     this.setState({markPos: this.state.markPos});
     this.props.onChange(this.state);
@@ -560,7 +560,7 @@ class Board extends Component {
     this.stopGame = this.stopGame.bind(this);
     this.resetGame = this.resetGame.bind(this);
     this.generateMines = this.generateMines.bind(this);
-    this.toggleMarked = this.toggleMarked.bind(this);
+    this.toggleMark = this.toggleMark.bind(this);
     this.open = this.open.bind(this);
     this.postOpen = this.postOpen.bind(this);
     this.areaOpen = this.areaOpen.bind(this);
@@ -640,7 +640,7 @@ class Board extends Component {
     });
   }
   handleRightMouseDown(i, j) {
-    this.toggleMarked(i, j);
+    this.toggleMark(i, j);
     this.setState({cells: this.state.cells});
   }
   handleBothMouseDown(i, j) {
