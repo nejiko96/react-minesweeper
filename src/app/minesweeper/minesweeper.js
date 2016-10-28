@@ -166,6 +166,14 @@ class Listener {
       both: 3
     };
   }
+  static get noop() {
+    return {
+      handleMouseDown: utils.noop,
+      handleMouseUp: utils.noop,
+      handleMouseOver: utils.noop,
+      handleMouseOut: utils.noop
+    };
+  }
   constructor(target) {
     this.pressed = 0;
     this.callbacks = [
@@ -238,13 +246,6 @@ class Listener {
     const cb = this.callbacks[e][b - 1];
     cb && cb(i, j);
   }
-}
-
-Listener.noop = {
-  handleMouseDown: utils.noop,
-  handleMouseUp: utils.noop,
-  handleMouseOver: utils.noop,
-  handleMouseOut: utils.noop
 }
 
 class CellValue {
@@ -414,12 +415,31 @@ class Board extends Component {
     this.listener = new Listener(this);
   }
   generateMines(i, j) {
-    // dummy
-    this.state.minePos =  new Set(['[0,0]', '[2,1]', '[4,2]']);
-    this.state.minePos.forEach(pos => {
-      const [i, j] = JSON.parse(pos);
-      this.state.cells[i][j].putMine();
+    const w = this.props.width;
+    const h = this.props.height;
+    let excludes = this.neighbors(i, j)
+      .map(([i2, j2]) => i2 * this.props.width + j2);
+    let tgts = utils.fillArray(w * h, (k) => k)
+    .filter(k => {
+      if (k === excludes[0]) {
+        excludes.shift();
+        return false;
+      }
+      return true;
     });
+    const result = new Set();
+    let m = this.props.mines;
+    let t = tgts.length;
+    while(m--) {
+      const k = Math.floor(Math.random() * t--);
+      const tmp = tgts[k];
+      tgts[k] = tgts[t];
+      tgts[t] = tmp;
+      const pos = [i, j] = [Math.floor(tmp / w), tmp % w]
+      result.add(JSON.stringify(pos));
+      this.state.cells[i][j].putMine();
+    }
+    this.state.minePos = result;
     this.setState({minePos: this.state.minePos});
   }
   toggleMarked(i, j) {
@@ -494,12 +514,12 @@ class Board extends Component {
       ]
     );
   }
-  neighbors() {
+  neighbors(i, j) {
     return this.relatives(i, j,
       [
-        [-1, -1], [-1,  0], [-1, 1],
-        [ 0,  1], [ 1,  1], [ 1, 0],
-        [ 1, -1], [ 0, -1], [ 0, 0]
+        [-1, -1], [-1, 0], [-1, 1],
+        [ 0, -1], [ 0, 0], [ 0, 1],
+        [ 1, -1], [ 1, 0], [ 1, 1]
       ]
     );
   }
@@ -590,10 +610,8 @@ class Board extends Component {
     this.setState({cells: this.state.cells});
   }
   handleBothMouseDown(i, j) {
-    console.log(`BothMouseDown(${i}, ${j})`);
   }
   handleBothMouseUp(i, j) {
-    console.log(`BothMouseUp(${i}, ${j})`);
   }
 }
 
