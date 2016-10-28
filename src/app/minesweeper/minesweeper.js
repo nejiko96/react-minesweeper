@@ -2,11 +2,9 @@ import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 
 const utils = {
-  fillArray: (n, fn) => Array.apply(null, Array(n)).map((_, i) => fn(i)),
-  fillArray2D: (w, h, fn) => Array.apply(null, Array(h)).map(
-    (_, i) => Array.apply(null, Array(w)).map(
-      (_, j) => fn(i, j)
-    )
+  fillArray: (n, fn) => Array.from({length: n}, (_, i) => fn(i)),
+  fillArray2D: (w, h, fn) => Array.from({length: h}, (_, i) =>
+    Array.from({length: w}, (_, j) => fn(i, j))
   ),
   getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
   noop: () => {},
@@ -342,30 +340,14 @@ class CellState {
   putMine() {
     this.flags |= Cell.f.mine;
   }
+  hasMine() {
+    return this.flags & Cell.f.mine;
+  }
   press() {
     this.subFlags |= Cell.sf.pressed;
   }
   release() {
     this.subFlags &= ~Cell.sf.pressed;
-  }
-  open(byClick) {
-    // already opened
-    if (!(this.flags & Cell.f.hidden)) {
-      return Cell.result.none;
-    }
-    // click on marked
-    if (this.flags & Cell.f.marked && byClick) {
-      return Cell.result.none;
-    }
-    // open
-    this.flags &= ~Cell.f.hidden;
-    // if mine exists
-    if (this.flags & Cell.f.mine) {
-      // explode if click open
-      if (byClick) { this.subFlags |= Cell.sf.exploded }
-      return Cell.result.exploded;
-    }
-    return Cell.result.opened;
   }
   toggleMarked() {
     // already opened
@@ -386,6 +368,28 @@ class CellState {
     // not marked -> marked
     this.flags |= Cell.f.marked;
     return Cell.result.marked;
+  }
+  open(byClick) {
+    // already opened
+    if (!(this.flags & Cell.f.hidden)) {
+      return Cell.result.none;
+    }
+    // click on marked
+    if (this.flags & Cell.f.marked && byClick) {
+      return Cell.result.none;
+    }
+    // open
+    this.flags &= ~Cell.f.hidden;
+    // if mine exists
+    if (this.flags & Cell.f.mine) {
+      // explode if click open
+      if (byClick) { this.subFlags |= Cell.sf.exploded }
+      return Cell.result.exploded;
+    }
+    return Cell.result.opened;
+  }
+  setHint(hint) {
+    this.subFlags |= hint & Cell.sf.hint;
   }
 }
 
@@ -445,7 +449,17 @@ class Board extends Component {
     }
   }
   postOpen(i, j) {
-
+    const surr = this.surroundings(i, j);
+    let hint = 0;
+    surr.forEach(([i2, j2]) => {
+      if (this.state.cells[i2][j2].hasMine()) {
+        hint++;
+      }
+    });
+    this.state.cells[i][j].setHint(hint);
+    if (hint === 0) {
+      surr.forEach(([i2, j2]) => this.open(i2, j2));
+    }
   }
   gameClear() {
     this.stopGame();
@@ -466,7 +480,7 @@ class Board extends Component {
     );
   }
   surroundings(i, j) {
-    return relatives(i, j,
+    return this.relatives(i, j,
       [
         [-1, -1], [-1, 0], [-1,  1], [0,  1],
         [ 1,  1], [ 1, 0], [ 1, -1], [0, -1]
@@ -474,7 +488,7 @@ class Board extends Component {
     );
   }
   neighbors() {
-    return relatives(i, j,
+    return this.relatives(i, j,
       [
         [-1, -1], [-1,  0], [-1, 1],
         [ 0,  1], [ 1,  1], [ 1, 0],
