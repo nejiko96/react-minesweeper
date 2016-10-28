@@ -418,15 +418,15 @@ class Board extends Component {
     const w = this.props.width;
     const h = this.props.height;
     let excludes = this.neighbors(i, j)
-      .map(([i2, j2]) => i2 * this.props.width + j2);
+      .map(([i2, j2]) => i2 * w + j2);
     let tgts = utils.fillArray(w * h, (k) => k)
-    .filter(k => {
-      if (k === excludes[0]) {
-        excludes.shift();
-        return false;
-      }
-      return true;
-    });
+      .filter(k => {
+        if (k === excludes[0]) {
+          excludes.shift();
+          return false;
+        }
+        return true;
+      });
     const result = new Set();
     let m = this.props.mines;
     let t = tgts.length;
@@ -538,10 +538,14 @@ class Board extends Component {
     this.gameOver = this.gameOver.bind(this);
     this.relatives = this.relatives.bind(this);
     this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
-    this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
     this.handleLeftMouseOver = this.handleLeftMouseOver.bind(this);
     this.handleLeftMouseOut = this.handleLeftMouseOut.bind(this);
+    this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
     this.handleRightMouseDown = this.handleRightMouseDown.bind(this);
+    this.handleBothMouseDown = this.handleBothMouseDown.bind(this);
+    this.handleBothMouseOver = this.handleBothMouseOver.bind(this);
+    this.handleBothMouseOut = this.handleBothMouseOut.bind(this);
+    this.handleBothMouseUp = this.handleBothMouseUp.bind(this);
   }
   componentDidMount() {
     this.listener = new Listener(this);
@@ -610,8 +614,28 @@ class Board extends Component {
     this.setState({cells: this.state.cells});
   }
   handleBothMouseDown(i, j) {
+    this.neighbors(i, j).forEach(
+      ([i, j]) => this.state.cells[i][j].press()
+    );
+    this.setState({cells: this.state.cells});
+  }
+  handleBothMouseOver(i, j) {
+    this.neighbors(i, j).forEach(
+      ([i, j]) => this.state.cells[i][j].press()
+    );
+    this.setState({cells: this.state.cells});
+  }
+  handleBothMouseOut(i, j) {
+     this.neighbors(i, j).forEach(
+      ([i, j]) => this.state.cells[i][j].release()
+    );
+    this.setState({cells: this.state.cells});
   }
   handleBothMouseUp(i, j) {
+     this.neighbors(i, j).forEach(
+      ([i, j]) => this.state.cells[i][j].release()
+    );
+    this.setState({cells: this.state.cells});
   }
 }
 
