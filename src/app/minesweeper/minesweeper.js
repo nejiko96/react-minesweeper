@@ -281,8 +281,8 @@ class CellValue {
       none: 0,
       opened: 1,
       exploded: 2,
-      marked: 3,
-      unmarked: 4,
+      marked: 4,
+      unmarked: 8,
     };
   }
   constructor() {
@@ -350,15 +350,17 @@ class CellValue {
     if (!(this.flags & CellValue.f.hidden)) {
       return CellValue.result.none;
     }
-    // click on marked
+    // skip if clicked on mark
     if (this.flags & CellValue.f.marked && byClick) {
       return CellValue.result.none;
     }
+
     // open
     this.flags &= ~CellValue.f.hidden;
-    // if mine exists
+
+    // if there is a mine
     if (this.flags & CellValue.f.mine) {
-      // explode if click open
+      // explode if clicked on mine
       if (byClick) { this.subFlags |= CellValue.sf.exploded }
       return CellValue.result.exploded;
     }
@@ -366,6 +368,13 @@ class CellValue {
   }
   setHint(hint) {
     this.subFlags |= hint & CellValue.sf.hint;
+  }
+  getHint() {
+    if (this.flags) {
+      return -1;
+    }
+    // not marked, no mine, opened
+    return this.subFlags & CellValue.sf.hint;
   }
 }
 
@@ -399,7 +408,7 @@ class Board extends Component {
       cells: utils.fillArray2D(props.width, props.height, () => new CellValue()),
       minePos: new Set(),
       markPos: new Set(),
-      clearCountDown: props.width * props.height - props.mines
+      countDown: props.width * props.height - props.mines
     };
   }
   startGame(i, j) {
@@ -462,7 +471,7 @@ class Board extends Component {
   open(i, j) {
     const result = this.state.cells[i][j].open(true);
     if (result == CellValue.result.opened) {
-      this.state.clearCountDown--;
+      this.state.countDown--;
       this.postOpen(i, j);
     }
     return result;
@@ -476,9 +485,29 @@ class Board extends Component {
       }
     });
     this.state.cells[i][j].setHint(hint);
-    if (hint === 0) {
-      surr.forEach(([i2, j2]) => this.open(i2, j2));
+    if (hint !== 0) {
+      return;
     }
+    surr.forEach(([i2, j2]) => this.open(i2, j2));
+  }
+  areaOpen(i, j) {
+    const hint = this.state.cells[i][j].getHint();
+    if (hint < 0) {
+      return;
+    }
+    const surr = this.surroundings(i, j);
+    let marks = 0;
+    surr.forEach(pos => {
+      if (this.state.markPos.has(JSON.stringify(pos))) {
+        marks++;
+      }
+    });
+    if (marks !== hint) {
+      return;
+    }
+    let result = 0;
+    surr.forEach(([i2, j2]) => result |= this.open(i2, j2));
+    return result;
   }
   gameClear() {
     this.stopGame();
@@ -534,6 +563,7 @@ class Board extends Component {
     this.toggleMarked = this.toggleMarked.bind(this);
     this.open = this.open.bind(this);
     this.postOpen = this.postOpen.bind(this);
+    this.areaOpen = this.areaOpen.bind(this);
     this.gameClear = this.gameClear.bind(this);
     this.gameOver = this.gameOver.bind(this);
     this.relatives = this.relatives.bind(this);
@@ -595,18 +625,18 @@ class Board extends Component {
       this.startGame(i, j);
     }
     const result = this.open(i, j);
-    if (
-      result == CellValue.result.opened
-      && this.state.clearCountDown <= 0
-    ) {
-      this.gameClear();
-    }
     if (result == CellValue.result.exploded) {
       this.gameOver();
     }
+    if (
+      result == CellValue.result.opened
+      && this.state.countDown <= 0
+    ) {
+      this.gameClear();
+    }
     this.setState({
       cells: this.state.cells,
-      clearCountDown: this.state.clearCountDown
+      countDown: this.state.countDown
     });
   }
   handleRightMouseDown(i, j) {
@@ -626,16 +656,28 @@ class Board extends Component {
     this.setState({cells: this.state.cells});
   }
   handleBothMouseOut(i, j) {
-     this.neighbors(i, j).forEach(
+    this.neighbors(i, j).forEach(
       ([i, j]) => this.state.cells[i][j].release()
     );
     this.setState({cells: this.state.cells});
   }
   handleBothMouseUp(i, j) {
-     this.neighbors(i, j).forEach(
+    this.neighbors(i, j).forEach(
       ([i, j]) => this.state.cells[i][j].release()
     );
-    this.setState({cells: this.state.cells});
+    const result = this.areaOpen(i, j);
+    if (result & CellValue.result.exploded) {
+      this.gameOver();
+    } else if (
+      result & CellValue.result.opened
+      && this.state.countDown <= 0
+    ) {
+      this.gameClear();
+    }
+    this.setState({
+      cells: this.state.cells,
+      countDown: this.state.countDown
+    });
   }
 }
 
