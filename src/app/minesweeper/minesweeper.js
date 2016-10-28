@@ -117,10 +117,10 @@ class Timer extends Component {
     this.reset = this.reset.bind(this);
   }
   componentDidMount() {
-    this.props.running && this.start();
+    this.props.status === Timer.status.running && this.start();
   }
   componentWillUnmount() {
-    this.props.running && this.intervalID && this.stop();
+    this.intervalID && this.stop();
   }
   componentWillReceiveProps(nextProps) {
     if (this.props.status !== nextProps.status) {
@@ -390,8 +390,8 @@ class Board extends Component {
   init(props) {
     return {
       cells: utils.fillArray2D(props.width, props.height, () => new CellState()),
-      minePos: {},
-      markPos: {}
+      minePos: new Set(),
+      markPos: new Set()
     };
   }
   startGame(i, j) {
@@ -407,7 +407,7 @@ class Board extends Component {
     this.listener = new Listener(this);
   }
   generateMines(i, j) {
-    return {'0_0': [0, 0]};
+    return new Set([0, 0].toString());
   }
   open(i, j, byClick) {
     const result = this.state.cells[i][j].open(byClick);
@@ -417,15 +417,15 @@ class Board extends Component {
     if (result == Cell.result.none) {
       return;
     }
-    const key = `${i}_${j}`;
     switch (result) {
       case Cell.result.marked:
-        this.state.markPos[key] = [i, j];
+        this.state.markPos.add([i, j].toString());
         break;
       case Cell.result.unmarked:
-        delete this.state.markPos[key];
+        this.state.markPos.delete([i, j].toString());
         break;
     }
+    this.props.onChange(this.state);
   }
   constructor(props) {
     super(props);
@@ -490,7 +490,7 @@ class Board extends Component {
   }
   handleLeftMouseUp(i, j) {
     this.state.cells[i][j].release();
-    if (Object.keys(this.state.minePos).length === 0) {
+    if (this.state.minePos.size === 0) {
       this.startGame(i, j);
     }
     this.open(i, j, true);
@@ -514,8 +514,14 @@ Board.propTypes = {
   mines: React.PropTypes.number.isRequired,
   onStart: React.PropTypes.func,
   onStop: React.PropTypes.func,
-  onRemainChange: React.PropTypes.func
+  onChange: React.PropTypes.func
 };
+
+Board.defaultProps = {
+  onStart: utils.noop,
+  onStop: utils.noop,
+  onChange: utils.noop
+}
 
 export class Minesweeper extends Component {
   static get settings() {
@@ -575,7 +581,7 @@ export class Minesweeper extends Component {
     const other = {
       gameId: 1,
       timerStatus: Timer.status.notStarted,
-      remain: size.mines
+      board: null
     };
     return Object.assign({}, size, other);
   }
@@ -601,7 +607,9 @@ export class Minesweeper extends Component {
       <div>
         <form>
           <nobr>
-            <Remain value={this.state.remain}/>mines
+            <Remain
+              value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
+              />mines
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             time : <Timer interval="1s" limit={999} status={this.state.timerStatus}/>
             <Board
@@ -611,7 +619,7 @@ export class Minesweeper extends Component {
               mines={this.state.mines}
               onStart={this.handleStart}
               onStop={this.handleStop}
-              onChange={this.handleBoardChange}
+              onChange={board => this.handleBoardChange(board)}
               />
             <button
               type="button"
@@ -630,13 +638,13 @@ export class Minesweeper extends Component {
     this.setState({timerStatus: Timer.status.stopped});
   }
   handleBoardChange(board) {
-    this.setState({remain: board.state.mines - board.state.markPos.length});
+    this.setState({board: board});
   }
   handleRetry() {
     this.setState({
       gameId: this.state.gameId + 1,
       timerStatus: Timer.status.notStarted,
-      remain: this.state.mines
+      board: null
     });
   }
   handleContextMenu(e) {
