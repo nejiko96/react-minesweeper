@@ -305,7 +305,7 @@ class Cell extends Component {
       return Cell.style.hidden;
     }
     if (flags & Cell.f.mine) {
-      return subFlags & Cell.sf.exploded ? Cell.style.explosion : Cell.style.mine;
+      return (subFlags & Cell.sf.exploded) ? Cell.style.explosion : Cell.style.mine;
     }
     return Cell.style.open + (subFlags & Cell.sf.hint);
   }
@@ -339,6 +339,9 @@ class CellState {
     this.flags = Cell.f.hidden;
     this.subFlags = 0;
   }
+  putMine() {
+    this.flags |= Cell.f.mine;
+  }
   press() {
     this.subFlags |= Cell.sf.pressed;
   }
@@ -359,7 +362,7 @@ class CellState {
     // if mine exists
     if (this.flags & Cell.f.mine) {
       // explode if click open
-      if (byClick) { this.subFlag |= Cell.sf.exploded }
+      if (byClick) { this.subFlags |= Cell.sf.exploded }
       return Cell.result.exploded;
     }
     return Cell.result.opened;
@@ -395,7 +398,7 @@ class Board extends Component {
     };
   }
   startGame(i, j) {
-    this.setState({minePos: this.generateMines(i, j)});
+    this.generateMines(i, j);
     this.props.onStart();
   }
   stopGame() {
@@ -407,7 +410,58 @@ class Board extends Component {
     this.listener = new Listener(this);
   }
   generateMines(i, j) {
-    return new Set([0, 0].toString());
+    // dummy
+    this.state.minePos =  new Set(['[0,0]', '[2,1]', '[4,2]']);
+    this.state.minePos.forEach(pos => {
+      const [i, j] = JSON.parse(pos);
+      this.state.cells[i][j].putMine();
+    });
+    this.setState({
+      cells: this.state.cells,
+      minePos: this.state.minePos
+    });
+  }
+  toggleMarked(i, j) {
+    const result = this.state.cells[i][j].toggleMarked();
+    if (result == Cell.result.none) {
+      return;
+    }
+    const pos = JSON.stringify([i, j]);
+    switch (result) {
+      case Cell.result.marked:
+        this.state.markPos.add(pos);
+        break;
+      case Cell.result.unmarked:
+        this.state.markPos.delete(pos);
+        break;
+    }
+    this.setState({
+      markPos: this.state.markPos
+    });
+    this.props.onChange(this.state);
+  }
+  open(i, j) {
+    const result = this.state.cells[i][j].open(true);
+    if (result == Cell.result.opened) {
+      this.postOpen(i, j);
+    }
+    if (result == Cell.result.exploded) {
+      this.gameOver();
+    }
+  }
+  postOpen(i, j) {
+
+  }
+  gameClear() {
+    this.stopGame();
+  }
+  gameOver() {
+    this.stopGame();
+    new Set([...this.state.minePos, ...this.state.markPos])
+    .forEach(pos => {
+      const [i, j] = JSON.parse(pos);
+      this.state.cells[i][j].open(false);
+    });
   }
   relatives(i, j, diffs) {
     return diffs
@@ -433,25 +487,6 @@ class Board extends Component {
       ]
     );
   }
-  open(i, j, byClick) {
-    const result = this.state.cells[i][j].open(byClick);
-  }
-  toggleMarked(i, j) {
-    const result = this.state.cells[i][j].toggleMarked();
-    if (result == Cell.result.none) {
-      return;
-    }
-    const pos = [i, j].toString();
-    switch (result) {
-      case Cell.result.marked:
-        this.state.markPos.add(pos);
-        break;
-      case Cell.result.unmarked:
-        this.state.markPos.delete(pos);
-        break;
-    }
-    this.props.onChange(this.state);
-  }
   constructor(props) {
     super(props);
     this.state = this.init(props);
@@ -460,8 +495,12 @@ class Board extends Component {
     this.stopGame = this.startGame.bind(this);
     this.resetGame = this.resetGame.bind(this);
     this.generateMines = this.generateMines.bind(this);
-    this.open = this.open.bind(this);
     this.toggleMarked = this.toggleMarked.bind(this);
+    this.open = this.open.bind(this);
+    this.postOpen = this.postOpen.bind(this);
+    this.gameClear = this.gameClear.bind(this);
+    this.gameOver = this.gameOver.bind(this);
+    this.relatives = this.relatives.bind(this);
     this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
     this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
     this.handleLeftMouseOver = this.handleLeftMouseOver.bind(this);
@@ -505,7 +544,6 @@ class Board extends Component {
     this.setState({cells: this.state.cells});
   }
   handleLeftMouseOver(i, j) {
-    console.log(`LeftMouseOver(${i}, ${j})`);
     this.state.cells[i][j].press();
     this.setState({cells: this.state.cells});
   }
@@ -518,7 +556,7 @@ class Board extends Component {
     if (this.state.minePos.size === 0) {
       this.startGame(i, j);
     }
-    this.open(i, j, true);
+    this.open(i, j);
     this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
