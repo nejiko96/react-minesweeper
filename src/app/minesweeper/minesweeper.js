@@ -340,9 +340,6 @@ class CellState {
   putMine() {
     this.flags |= Cell.f.mine;
   }
-  hasMine() {
-    return this.flags & Cell.f.mine;
-  }
   press() {
     this.subFlags |= Cell.sf.pressed;
   }
@@ -368,6 +365,10 @@ class CellState {
     // not marked -> marked
     this.flags |= Cell.f.marked;
     return Cell.result.marked;
+  }
+  setMarked() {
+    this.subFlags &= ~Cell.sf.pending;
+    this.flags |= Cell.f.marked;
   }
   open(byClick) {
     // already opened
@@ -398,7 +399,8 @@ class Board extends Component {
     return {
       cells: utils.fillArray2D(props.width, props.height, () => new CellState()),
       minePos: new Set(),
-      markPos: new Set()
+      markPos: new Set(),
+      hiddenCnt: props.width * props.height - props.mines
     };
   }
   startGame(i, j) {
@@ -442,17 +444,16 @@ class Board extends Component {
   open(i, j) {
     const result = this.state.cells[i][j].open(true);
     if (result == Cell.result.opened) {
+      this.state.hiddenCnt--;
       this.postOpen(i, j);
     }
-    if (result == Cell.result.exploded) {
-      this.gameOver();
-    }
+    return result;
   }
   postOpen(i, j) {
     const surr = this.surroundings(i, j);
     let hint = 0;
-    surr.forEach(([i2, j2]) => {
-      if (this.state.cells[i2][j2].hasMine()) {
+    surr.forEach(pos => {
+      if (this.state.minePos.has(JSON.stringify(pos))) {
         hint++;
       }
     });
@@ -463,6 +464,13 @@ class Board extends Component {
   }
   gameClear() {
     this.stopGame();
+    this.state.markPos = this.state.minePos;
+    this.state.markPos.forEach(pos => {
+      const [i, j] = JSON.parse(pos);
+      this.state.cells[i][j].setMarked();
+    });
+    this.setState({markPos: this.state.markPos});
+    this.props.onChange(this.state);
   }
   gameOver() {
     this.stopGame();
@@ -565,8 +573,20 @@ class Board extends Component {
     if (this.state.minePos.size === 0) {
       this.startGame(i, j);
     }
-    this.open(i, j);
-    this.setState({cells: this.state.cells});
+    const result = this.open(i, j);
+    if (
+      result == Cell.result.opened
+      && this.state.hiddenCnt <= 0
+    ) {
+      this.gameClear();
+    }
+    if (result == Cell.result.exploded) {
+      this.gameOver();
+    }
+    this.setState({
+      cells: this.state.cells,
+      hiddenCnt: this.state.hiddenCnt
+    });
   }
   handleRightMouseDown(i, j) {
     this.toggleMarked(i, j);
