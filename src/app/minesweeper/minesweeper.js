@@ -2,12 +2,12 @@ import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 
 const utils = {
+  noop: () => {},
   fillArray: (n, fn) => Array.from({length: n}, (_, i) => fn(i)),
   fillArray2D: (w, h, fn) => Array.from({length: h}, (_, i) =>
     Array.from({length: w}, (_, j) => fn(i, j))
   ),
   getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
-  noop: () => {},
   addEventListener: (cmp, event, fn) => {
     ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
   },
@@ -37,32 +37,32 @@ const cellStyleBase = {
   width: cellPx
 };
 
-const cellStyle = (left, top) => {
-  const x = -cellSize * left;
-  const y = -cellSize * top;
+const cellStyle = (i) => {
+  const x = -cellSize * (i % 3);
+  const y = -cellSize * Math.floor(i / 3);
   const position = {backgroundPosition: `${x}px ${y}px`};
   return Object.assign({}, cellStyleBase, position);
 };
 
 const styles = {
-  remain: textBoxStyle,
+  counter: textBoxStyle,
   timer: textBoxStyle,
   cells: {
     lineHeight: 0
   },
-  cell: utils.fillArray(15, i => cellStyle(i % 3, Math.floor(i / 3))),
+  cell: utils.fillArray(15, i => cellStyle(i)),
   restart: {}
 };
 
-class Remain extends Component {
+class Counter extends Component {
   render() {
     return (
-      <span style={styles.remain} >{this.props.value}</span>
+      <span style={styles.counter} >{this.props.value}</span>
     );
   }
 }
 
-Remain.propTypes = {
+Counter.propTypes = {
   value: React.PropTypes.number
 };
 
@@ -527,7 +527,7 @@ class Board extends Component {
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
       const rowNodes = row.map((cell, j) => {
-        const key = `${i}_${j}`;
+        const key = JSON.stringify([i, j]);
         return (
           <Cell
             key={key}
@@ -680,7 +680,7 @@ export class Minesweeper extends Component {
       <div>
         <form>
           <nobr>
-            <Remain
+            <Counter
               value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
               />mines
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
