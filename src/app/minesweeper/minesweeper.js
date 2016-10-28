@@ -409,6 +409,30 @@ class Board extends Component {
   generateMines(i, j) {
     return new Set([0, 0].toString());
   }
+  relatives(i, j, diffs) {
+    return diffs
+    .map(([di, dj]) => [i + di, j + dj])
+    .filter(
+      ([i, j]) => this.state.cells[i] && this.state.cells[i][j]
+    );
+  }
+  surroundings(i, j) {
+    return relatives(i, j,
+      [
+        [-1, -1], [-1, 0], [-1,  1], [0,  1],
+        [ 1,  1], [ 1, 0], [ 1, -1], [0, -1]
+      ]
+    );
+  }
+  neighbors() {
+    return relatives(i, j,
+      [
+        [-1, -1], [-1,  0], [-1, 1],
+        [ 0,  1], [ 1,  1], [ 1, 0],
+        [ 1, -1], [ 0, -1], [ 0, 0]
+      ]
+    );
+  }
   open(i, j, byClick) {
     const result = this.state.cells[i][j].open(byClick);
   }
@@ -417,12 +441,13 @@ class Board extends Component {
     if (result == Cell.result.none) {
       return;
     }
+    const pos = [i, j].toString();
     switch (result) {
       case Cell.result.marked:
-        this.state.markPos.add([i, j].toString());
+        this.state.markPos.add(pos);
         break;
       case Cell.result.unmarked:
-        this.state.markPos.delete([i, j].toString());
+        this.state.markPos.delete(pos);
         break;
     }
     this.props.onChange(this.state);
