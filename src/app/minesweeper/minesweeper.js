@@ -247,7 +247,7 @@ Listener.noop = {
   handleMouseOut: utils.noop
 }
 
-class Cell extends Component {
+class CellValue {
   static get f() {
     return {
       hidden: 1,
@@ -284,37 +284,98 @@ class Cell extends Component {
       unmarked: 4,
     };
   }
-  styleNo() {
-    const flags = this.props.flags;
-    const subFlags = this.props.subFlags;
-    if (flags === Cell.f.marked) {
-      return Cell.style.mistake;
-    }
-    if (flags & Cell.f.marked) {
-      return Cell.style.marked;
-    }
-    if (flags & Cell.f.hidden) {
-      if (subFlags & Cell.sf.pressed) {
-        return Cell.style.pressed;
-      }
-      if (subFlags & Cell.sf.pending) {
-        return Cell.style.pending;
-      }
-      return Cell.style.hidden;
-    }
-    if (flags & Cell.f.mine) {
-      return (subFlags & Cell.sf.exploded) ? Cell.style.explosion : Cell.style.mine;
-    }
-    return Cell.style.open + (subFlags & Cell.sf.hint);
+  constructor() {
+    this.flags = CellValue.f.hidden;
+    this.subFlags = 0;
   }
+  get styleIdx() {
+    const f = this.flags;
+    const sf = this.subFlags;
+    if (f === CellValue.f.marked) {
+      return CellValue.style.mistake;
+    }
+    if (f & CellValue.f.marked) {
+      return CellValue.style.marked;
+    }
+    if (f & CellValue.f.hidden) {
+      if (sf & CellValue.sf.pressed) {
+        return CellValue.style.pressed;
+      }
+      if (sf & CellValue.sf.pending) {
+        return CellValue.style.pending;
+      }
+      return CellValue.style.hidden;
+    }
+    if (f & CellValue.f.mine) {
+      return (sf & CellValue.sf.exploded) ? CellValue.style.explosion : CellValue.style.mine;
+    }
+    return CellValue.style.open + (sf & CellValue.sf.hint);
+  }
+  putMine() {
+    this.flags |= CellValue.f.mine;
+  }
+  press() {
+    this.subFlags |= CellValue.sf.pressed;
+  }
+  release() {
+    this.subFlags &= ~CellValue.sf.pressed;
+  }
+  toggleMarked() {
+    // already opened
+    if (!(this.flags & CellValue.f.hidden)) {
+      return CellValue.result.none;
+    }
+    if (this.flags & CellValue.f.marked) {
+      // marked -> pending
+      this.flags &= ~CellValue.f.marked;
+      this.subFlags |= CellValue.sf.pending;
+      return CellValue.result.unmarked;
+    }
+    if (this.subFlags & CellValue.sf.pending) {
+      // pending -> not marked
+      this.subFlags &= ~CellValue.sf.pending;
+      return CellValue.result.none;
+    }
+    // not marked -> marked
+    this.flags |= CellValue.f.marked;
+    return CellValue.result.marked;
+  }
+  setMarked() {
+    this.subFlags &= ~CellValue.sf.pending;
+    this.flags |= CellValue.f.marked;
+  }
+  open(byClick) {
+    // already opened
+    if (!(this.flags & CellValue.f.hidden)) {
+      return CellValue.result.none;
+    }
+    // click on marked
+    if (this.flags & CellValue.f.marked && byClick) {
+      return CellValue.result.none;
+    }
+    // open
+    this.flags &= ~CellValue.f.hidden;
+    // if mine exists
+    if (this.flags & CellValue.f.mine) {
+      // explode if click open
+      if (byClick) { this.subFlags |= CellValue.sf.exploded }
+      return CellValue.result.exploded;
+    }
+    return CellValue.result.opened;
+  }
+  setHint(hint) {
+    this.subFlags |= hint & CellValue.sf.hint;
+  }
+}
+
+class Cell extends Component {
   constructor(props) {
     super(props);
-    this.styleNo = this.styleNo.bind(this);
   }
   render() {
     return (
       <span
-        style={styles.cell[this.styleNo()]}
+        style={styles.cell[this.props.value.styleIdx]}
         onMouseDown={this.props.onMouseDown}
         onMouseUp={this.props.onMouseUp}
         onMouseOver={this.props.onMouseOver}
@@ -324,83 +385,20 @@ class Cell extends Component {
 }
 
 Cell.propTypes = {
-  flags: React.PropTypes.number.isRequired,
-  subFlags: React.PropTypes.number.isRequired,
+  value: React.PropTypes.object.isRequired,
   onMouseDown: React.PropTypes.func.isRequired,
   onMouseUp: React.PropTypes.func.isRequired,
   onMouseOver: React.PropTypes.func.isRequired,
   onMouseOut: React.PropTypes.func.isRequired
 };
 
-class CellState {
-  constructor() {
-    this.flags = Cell.f.hidden;
-    this.subFlags = 0;
-  }
-  putMine() {
-    this.flags |= Cell.f.mine;
-  }
-  press() {
-    this.subFlags |= Cell.sf.pressed;
-  }
-  release() {
-    this.subFlags &= ~Cell.sf.pressed;
-  }
-  toggleMarked() {
-    // already opened
-    if (!(this.flags & Cell.f.hidden)) {
-      return Cell.result.none;
-    }
-    if (this.flags & Cell.f.marked) {
-      // marked -> pending
-      this.flags &= ~Cell.f.marked;
-      this.subFlags |= Cell.sf.pending;
-      return Cell.result.unmarked;
-    }
-    if (this.subFlags & Cell.sf.pending) {
-      // pending -> not marked
-      this.subFlags &= ~Cell.sf.pending;
-      return Cell.result.none;
-    }
-    // not marked -> marked
-    this.flags |= Cell.f.marked;
-    return Cell.result.marked;
-  }
-  setMarked() {
-    this.subFlags &= ~Cell.sf.pending;
-    this.flags |= Cell.f.marked;
-  }
-  open(byClick) {
-    // already opened
-    if (!(this.flags & Cell.f.hidden)) {
-      return Cell.result.none;
-    }
-    // click on marked
-    if (this.flags & Cell.f.marked && byClick) {
-      return Cell.result.none;
-    }
-    // open
-    this.flags &= ~Cell.f.hidden;
-    // if mine exists
-    if (this.flags & Cell.f.mine) {
-      // explode if click open
-      if (byClick) { this.subFlags |= Cell.sf.exploded }
-      return Cell.result.exploded;
-    }
-    return Cell.result.opened;
-  }
-  setHint(hint) {
-    this.subFlags |= hint & Cell.sf.hint;
-  }
-}
-
 class Board extends Component {
   init(props) {
     return {
-      cells: utils.fillArray2D(props.width, props.height, () => new CellState()),
+      cells: utils.fillArray2D(props.width, props.height, () => new CellValue()),
       minePos: new Set(),
       markPos: new Set(),
-      hiddenCnt: props.width * props.height - props.mines
+      clearCountDown: props.width * props.height - props.mines
     };
   }
   startGame(i, j) {
@@ -426,15 +424,15 @@ class Board extends Component {
   }
   toggleMarked(i, j) {
     const result = this.state.cells[i][j].toggleMarked();
-    if (result == Cell.result.none) {
+    if (result == CellValue.result.none) {
       return;
     }
     const pos = JSON.stringify([i, j]);
     switch (result) {
-      case Cell.result.marked:
+      case CellValue.result.marked:
         this.state.markPos.add(pos);
         break;
-      case Cell.result.unmarked:
+      case CellValue.result.unmarked:
         this.state.markPos.delete(pos);
         break;
     }
@@ -443,8 +441,8 @@ class Board extends Component {
   }
   open(i, j) {
     const result = this.state.cells[i][j].open(true);
-    if (result == Cell.result.opened) {
-      this.state.hiddenCnt--;
+    if (result == CellValue.result.opened) {
+      this.state.clearCountDown--;
       this.postOpen(i, j);
     }
     return result;
@@ -479,6 +477,7 @@ class Board extends Component {
       const [i, j] = JSON.parse(pos);
       this.state.cells[i][j].open(false);
     });
+    this.props.onChange(this.state);
   }
   relatives(i, j, diffs) {
     return diffs
@@ -535,12 +534,10 @@ class Board extends Component {
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
       const rowNodes = row.map((cell, j) => {
-        const key = JSON.stringify([i, j]);
         return (
           <Cell
-            key={key}
-            flags={cell.flags}
-            subFlags={cell.subFlags}
+            key={JSON.stringify([i, j])}
+            value={cell}
             onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
             onMouseOver={() => this.listener.handleMouseOver(i, j)}
@@ -575,17 +572,17 @@ class Board extends Component {
     }
     const result = this.open(i, j);
     if (
-      result == Cell.result.opened
-      && this.state.hiddenCnt <= 0
+      result == CellValue.result.opened
+      && this.state.clearCountDown <= 0
     ) {
       this.gameClear();
     }
-    if (result == Cell.result.exploded) {
+    if (result == CellValue.result.exploded) {
       this.gameOver();
     }
     this.setState({
       cells: this.state.cells,
-      hiddenCnt: this.state.hiddenCnt
+      clearCountDown: this.state.clearCountDown
     });
   }
   handleRightMouseDown(i, j) {
