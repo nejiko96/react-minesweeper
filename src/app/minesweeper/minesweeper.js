@@ -1,6 +1,23 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 
+const utils = {
+  fillArray: (n, fn) => Array.apply(null, Array(n)).map((_, i) => fn(i)),
+  fillArray2D: (w, h, fn) => Array.apply(null, Array(h)).map(
+    (_, i) => Array.apply(null, Array(w)).map(
+      (_, j) => fn(i, j)
+    )
+  ),
+  getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
+  noop: () => {},
+  addEventListener: (cmp, event, fn) => {
+    ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
+  },
+  removeEventListener: (cmp, fn) => {
+    ReactDOM.findDOMNode(cmp).removeEventListener(event, fn);
+  }
+};
+
 const cellSize = 32;
 const cellPx = `${cellSize}px`;
 const cellImg = `url('images/green_${cellSize}x${cellSize}.png')`;
@@ -35,24 +52,8 @@ const styles = {
   cells: {
     lineHeight: 0
   },
-  cell: Array.apply(null, Array(15)).map((v, i) => cellStyle(i % 3, i / 3)),
+  cell: utils.fillArray(15, i => cellStyle(i % 3, Math.floor(i / 3))),
   restart: {}
-};
-
-const utils = {
-  getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
-  fillArray2D: (w, h, fn) => Array.apply(null, Array(h)).map(
-    (_, i) => Array.apply(null, Array(w)).map(
-      (_, j) => fn(i, j)
-    )
-  ),
-  noop: () => {},
-  addEventListener: (cmp, event, fn) => {
-    ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
-  },
-  removeEventListener: (cmp, fn) => {
-    ReactDOM.findDOMNode(cmp).removeEventListener(event, fn);
-  }
 };
 
 class Remain extends Component {
@@ -248,38 +249,6 @@ Listener.noop = {
   handleMouseOut: utils.noop
 }
 
-class CellState {
-  constructor() {
-    this.flags = Cell.f.hidden;
-    this.subFlags = 0;
-  }
-  press() {
-    this.subFlags |= Cell.sf.pressed;
-  }
-  release() {
-    this.subFlags &= ~Cell.sf.pressed;
-  }
-  open(byClick) {
-    // already open
-    if (!(this.flags & Cell.f.hidden)) {
-      return 0;
-    }
-    // marked & click open
-    if (this.flags & Cell.f.marked && byClick) {
-      return 0;
-    }
-    // open
-    this.flags &= ~Cell.f.hidden;
-    // if mine exists
-    if (this.flags & Cell.f.mine) {
-      // explode on click open
-      if (byClick) { this.subFlag |= Cell.sf.explode }
-      return 2;
-    }
-    return 1;
-  }
-}
-
 class Cell extends Component {
   static get f() {
     return {
@@ -292,7 +261,7 @@ class Cell extends Component {
     return {
       hint: 15,
       pending: 16,
-      explode: 32,
+      exploded: 32,
       pressed: 64
     };
   }
@@ -306,6 +275,15 @@ class Cell extends Component {
       mine: 12,
       explosion: 13,
       mistake: 14
+    };
+  }
+  static get result() {
+    return {
+      none: 0,
+      opened: 1,
+      exploded: 2,
+      marked: 3,
+      unmarked: 4,
     };
   }
   styleNo() {
@@ -327,7 +305,7 @@ class Cell extends Component {
       return Cell.style.hidden;
     }
     if (flags & Cell.f.mine) {
-      return subFlags & Cell.sf.explode ? Cell.style.explosion : Cell.style.mine;
+      return subFlags & Cell.sf.exploded ? Cell.style.explosion : Cell.style.mine;
     }
     return Cell.style.open + (subFlags & Cell.sf.hint);
   }
@@ -356,16 +334,68 @@ Cell.propTypes = {
   onMouseOut: React.PropTypes.func.isRequired
 };
 
+class CellState {
+  constructor() {
+    this.flags = Cell.f.hidden;
+    this.subFlags = 0;
+  }
+  press() {
+    this.subFlags |= Cell.sf.pressed;
+  }
+  release() {
+    this.subFlags &= ~Cell.sf.pressed;
+  }
+  open(byClick) {
+    // already opened
+    if (!(this.flags & Cell.f.hidden)) {
+      return Cell.result.none;
+    }
+    // click on marked
+    if (this.flags & Cell.f.marked && byClick) {
+      return Cell.result.none;
+    }
+    // open
+    this.flags &= ~Cell.f.hidden;
+    // if mine exists
+    if (this.flags & Cell.f.mine) {
+      // explode if click open
+      if (byClick) { this.subFlag |= Cell.sf.exploded }
+      return Cell.result.exploded;
+    }
+    return Cell.result.opened;
+  }
+  toggleMarked() {
+    // already opened
+    if (!(this.flags & Cell.f.hidden)) {
+      return Cell.result.none;
+    }
+    if (this.flags & Cell.f.marked) {
+      // marked -> pending
+      this.flags &= ~Cell.f.marked;
+      this.subFlags |= Cell.sf.pending;
+      return Cell.result.unmarked;
+    }
+    if (this.subFlags & Cell.sf.pending) {
+      // pending -> not marked
+      this.subFlags &= ~Cell.sf.pending;
+      return Cell.result.none;
+    }
+    // not marked -> marked
+    this.flags |= Cell.f.marked;
+    return Cell.result.marked;
+  }
+}
+
 class Board extends Component {
   init(props) {
     return {
       cells: utils.fillArray2D(props.width, props.height, () => new CellState()),
-      minePos: [],
-      markPos: []
+      minePos: {},
+      markPos: {}
     };
   }
   startGame(i, j) {
-    this.setState({minePos: this.generateMine(i, j)});
+    this.setState({minePos: this.generateMines(i, j)});
     this.props.onStart();
   }
   stopGame() {
@@ -376,11 +406,26 @@ class Board extends Component {
     this.setState(this.init(this.props));
     this.listener = new Listener(this);
   }
-  generateMine(i, j) {
-    return [[0, 0]];
+  generateMines(i, j) {
+    return {'0_0': [0, 0]};
   }
   open(i, j, byClick) {
     const result = this.state.cells[i][j].open(byClick);
+  }
+  toggleMarked(i, j) {
+    const result = this.state.cells[i][j].toggleMarked();
+    if (result == Cell.result.none) {
+      return;
+    }
+    const key = `${i}_${j}`;
+    switch (result) {
+      case Cell.result.marked:
+        this.state.markPos[key] = [i, j];
+        break;
+      case Cell.result.unmarked:
+        delete this.state.markPos[key];
+        break;
+    }
   }
   constructor(props) {
     super(props);
@@ -389,12 +434,14 @@ class Board extends Component {
     this.startGame = this.startGame.bind(this);
     this.stopGame = this.startGame.bind(this);
     this.resetGame = this.resetGame.bind(this);
-    this.generateMine = this.generateMine.bind(this);
+    this.generateMines = this.generateMines.bind(this);
     this.open = this.open.bind(this);
+    this.toggleMarked = this.toggleMarked.bind(this);
     this.handleLeftMouseDown = this.handleLeftMouseDown.bind(this);
     this.handleLeftMouseUp = this.handleLeftMouseUp.bind(this);
     this.handleLeftMouseOver = this.handleLeftMouseOver.bind(this);
     this.handleLeftMouseOut = this.handleLeftMouseOut.bind(this);
+    this.handleRightMouseDown = this.handleRightMouseDown.bind(this);
   }
   componentDidMount() {
     this.listener = new Listener(this);
@@ -443,17 +490,15 @@ class Board extends Component {
   }
   handleLeftMouseUp(i, j) {
     this.state.cells[i][j].release();
-    if (this.state.minePos.length === 0) {
+    if (Object.keys(this.state.minePos).length === 0) {
       this.startGame(i, j);
     }
     this.open(i, j, true);
     this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
-    console.log(`RightMouseDown(${i}, ${j})`);
-  }
-  handleRightMouseUp(i, j) {
-    console.log(`RightMouseUp(${i}, ${j})`);
+    this.toggleMarked(i, j);
+    this.setState({cells: this.state.cells});
   }
   handleBothMouseDown(i, j) {
     console.log(`BothMouseDown(${i}, ${j})`);
