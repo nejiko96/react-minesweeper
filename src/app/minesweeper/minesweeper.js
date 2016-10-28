@@ -340,7 +340,7 @@ class CellValue {
     this.flags |= CellValue.f.marked;
     return CellValue.result.marked;
   }
-  setMarked() {
+  forceMarked() {
     this.subFlags &= ~CellValue.sf.pending;
     this.flags |= CellValue.f.marked;
   }
@@ -465,7 +465,7 @@ class Board extends Component {
     this.state.markPos = this.state.minePos;
     this.state.markPos.forEach(pos => {
       const [i, j] = JSON.parse(pos);
-      this.state.cells[i][j].setMarked();
+      this.state.cells[i][j].forceMarked();
     });
     this.setState({markPos: this.state.markPos});
     this.props.onChange(this.state);
