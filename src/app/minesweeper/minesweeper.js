@@ -7,7 +7,7 @@ const utils = {
   fillArray2D: (w, h, fn) => Array.from({length: h}, (_, i) =>
     Array.from({length: w}, (_, j) => fn(i, j))
   ),
-  getProperty: (value, opt) => value ? Math.min(Math.max(value, opt.min), opt.max) : opt.default,
+  initProperty: (value, def) => value ? Math.min(Math.max(value, def.min), def.max) : def.default,
   addEventListener: (cmp, event, fn) => {
     ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
   },
@@ -29,19 +29,17 @@ const textBoxStyle = {
   width: '40px'
 };
 
-const cellStyleBase = {
-  backgroundImage: cellImg,
-  display: 'inline-block',
-  height: cellPx,
-  overflow: 'hidden',
-  width: cellPx
-};
-
 const cellStyle = i => {
   const x = -cellSize * (i % 3);
   const y = -cellSize * Math.floor(i / 3);
-  const position = {backgroundPosition: `${x}px ${y}px`};
-  return Object.assign({}, cellStyleBase, position);
+  return {
+    backgroundImage: cellImg,
+    display: 'inline-block',
+    height: cellPx,
+    overflow: 'hidden',
+    width: cellPx,
+    backgroundPosition: `${x}px ${y}px`
+  };
 };
 
 const styles = {
@@ -607,10 +605,11 @@ class Board extends Component {
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
       const rowNodes = row.map((cell, j) => {
+        const pos = [i, j];
         return (
           <Cell
-            key={[i, j]}
-            pos={[i, j]}
+            key={pos}
+            pos={pos}
             value={cell}
             listener={this.state.listener}
             />);
@@ -758,9 +757,9 @@ export class Minesweeper extends Component {
     return Minesweeper.settings.levels[level];
   }
   customSize(props) {
-    const w = utils.getProperty(props.width, Minesweeper.settings.width);
-    const h = utils.getProperty(props.height, Minesweeper.settings.height);
-    const m = utils.getProperty(props.mines, Minesweeper.settings.mines(w * h));
+    const w = utils.initProperty(props.width, Minesweeper.settings.width);
+    const h = utils.initProperty(props.height, Minesweeper.settings.height);
+    const m = utils.initProperty(props.mines, Minesweeper.settings.mines(w * h));
     return {
       width: w,
       height: h,
