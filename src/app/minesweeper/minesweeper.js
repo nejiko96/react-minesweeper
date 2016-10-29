@@ -11,7 +11,7 @@ const utils = {
   addEventListener: (cmp, event, fn) => {
     ReactDOM.findDOMNode(cmp).addEventListener(event, fn);
   },
-  removeEventListener: (cmp, fn) => {
+  removeEventListener: (cmp, event, fn) => {
     ReactDOM.findDOMNode(cmp).removeEventListener(event, fn);
   }
 };
@@ -37,7 +37,7 @@ const cellStyleBase = {
   width: cellPx
 };
 
-const cellStyle = (i) => {
+const cellStyle = i => {
   const x = -cellSize * (i % 3);
   const y = -cellSize * Math.floor(i / 3);
   const position = {backgroundPosition: `${x}px ${y}px`};
@@ -132,6 +132,8 @@ class Timer extends Component {
         case Timer.status.stopped:
           this.stop();
           break;
+        default:
+          break;
       }
     }
   }
@@ -180,22 +182,22 @@ class Listener {
       [
         target.handleLeftMouseDown,
         target.handleRightMouseDown,
-        target.handleBothMouseDown,
+        target.handleBothMouseDown
       ],
       [
         target.handleLeftMouseUp,
         target.handleRightMouseUp,
-        target.handleBothMouseUp,
+        target.handleBothMouseUp
       ],
       [
         target.handleLeftMouseOver,
         target.handleRightMouseOver,
-        target.handleBothMouseOver,
+        target.handleBothMouseOver
       ],
       [
         target.handleLeftMouseOut,
         target.handleRightMouseOut,
-        target.handleBothMouseOut,
+        target.handleBothMouseOut
       ]
     ];
   }
@@ -253,7 +255,7 @@ class CellValue {
     return {
       hidden: 1,
       mine: 2,
-      marked: 4,
+      marked: 4
     };
   }
   static get sf() {
@@ -282,7 +284,7 @@ class CellValue {
       opened: 1,
       exploded: 2,
       marked: 4,
-      unmarked: 8,
+      unmarked: 8
     };
   }
   constructor() {
@@ -342,10 +344,10 @@ class CellValue {
     return CellValue.result.marked;
   }
   forceMark() {
-    this.subFlags &= ~CellValue.sf.pending;
     this.flags |= CellValue.f.marked;
+    this.subFlags &= ~CellValue.sf.pending;
   }
-  open(byClick) {
+  open(byClick = true) {
     // already opened
     if (!(this.flags & CellValue.f.hidden)) {
       return CellValue.result.none;
@@ -354,7 +356,6 @@ class CellValue {
     if (this.flags & CellValue.f.marked && byClick) {
       return CellValue.result.none;
     }
-
     // open
     this.flags &= ~CellValue.f.hidden;
 
@@ -373,15 +374,12 @@ class CellValue {
     if (this.flags) {
       return -1;
     }
-    // not marked, no mine, opened
+    // no mine, not marked, and opened
     return this.subFlags & CellValue.sf.hint;
   }
 }
 
 class Cell extends Component {
-  constructor(props) {
-    super(props);
-  }
   render() {
     return (
       <span
@@ -426,34 +424,30 @@ class Board extends Component {
   generateMines(i, j) {
     const w = this.props.width;
     const h = this.props.height;
-    let tgts = utils.fillArray(w * h, (k) => k)
+    const tgts = utils.fillArray(w * h, k => k);
+    const excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
+    const result = this.state.minePos = new Set();
     let t = tgts.length;
-    let excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
     let e = excludes.length;
-    while(e--) {
-      t--;
-      const k = excludes[e];
-      const tmp = tgts[k];
-      tgts[k] = tgts[t];
-      tgts[t] = tmp;
-    }
-    const result = new Set();
     let m = this.props.mines;
-    while(m--) {
+    while (e--) {
+      const k = excludes[e];
+      t--;
+      [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
+    }
+    while (m--) {
       const k = Math.floor(Math.random() * t--);
-      const tmp = tgts[k];
-      tgts[k] = tgts[t];
-      tgts[t] = tmp;
-      const pos = [i, j] = [Math.floor(tmp / w), tmp % w]
+      const tgt = tgts[k];
+      const pos = [i, j] = [Math.floor(tgt / w), tgt % w];
       result.add(JSON.stringify(pos));
       this.state.cells[i][j].putMine();
+      [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
     }
-    this.state.minePos = result;
     this.setState({minePos: this.state.minePos});
   }
   toggleMark(i, j) {
     const result = this.state.cells[i][j].toggleMark();
-    if (result == CellValue.result.none) {
+    if (result === CellValue.result.none) {
       return;
     }
     const pos = JSON.stringify([i, j]);
@@ -464,13 +458,15 @@ class Board extends Component {
       case CellValue.result.unmarked:
         this.state.markPos.delete(pos);
         break;
+      default:
+        break;
     }
     this.setState({markPos: this.state.markPos});
     this.props.onChange(this.state);
   }
   open(i, j) {
-    const result = this.state.cells[i][j].open(true);
-    if (result == CellValue.result.opened) {
+    const result = this.state.cells[i][j].open();
+    if (result === CellValue.result.opened) {
       this.state.countDown--;
       this.postOpen(i, j);
     }
@@ -538,8 +534,8 @@ class Board extends Component {
   surroundings(i, j) {
     return this.relatives(i, j,
       [
-        [-1, -1], [-1, 0], [-1,  1], [0,  1],
-        [ 1,  1], [ 1, 0], [ 1, -1], [0, -1]
+        [-1, -1], [-1, 0], [-1, 1], [0, 1],
+        [1, 1], [1, 0], [1, -1], [0, -1]
       ]
     );
   }
@@ -547,8 +543,8 @@ class Board extends Component {
     return this.relatives(i, j,
       [
         [-1, -1], [-1, 0], [-1, 1],
-        [ 0, -1], [ 0, 0], [ 0, 1],
-        [ 1, -1], [ 1, 0], [ 1, 1]
+        [0, -1], [0, 0], [0, 1],
+        [1, -1], [1, 0], [1, 1]
       ]
     );
   }
@@ -592,7 +588,7 @@ class Board extends Component {
           <Cell
             key={JSON.stringify([i, j])}
             value={cell}
-            onMouseDown={(ev) => this.listener.handleMouseDown(ev, i, j)}
+            onMouseDown={ev => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
             onMouseOver={() => this.listener.handleMouseOver(i, j)}
             onMouseOut={() => this.listener.handleMouseOut(i, j)}
@@ -625,12 +621,12 @@ class Board extends Component {
       this.startGame(i, j);
     }
     const result = this.open(i, j);
-    if (result == CellValue.result.exploded) {
+    if (result === CellValue.result.exploded) {
       this.gameOver();
     }
     if (
-      result == CellValue.result.opened
-      && this.state.countDown <= 0
+      result === CellValue.result.opened &&
+      this.state.countDown <= 0
     ) {
       this.gameClear();
     }
@@ -669,8 +665,8 @@ class Board extends Component {
     if (result & CellValue.result.exploded) {
       this.gameOver();
     } else if (
-      result & CellValue.result.opened
-      && this.state.countDown <= 0
+      result & CellValue.result.opened &&
+      this.state.countDown <= 0
     ) {
       this.gameClear();
     }
@@ -695,7 +691,7 @@ Board.defaultProps = {
   onStart: utils.noop,
   onStop: utils.noop,
   onChange: utils.noop
-}
+};
 
 export class Minesweeper extends Component {
   static get settings() {
@@ -793,7 +789,7 @@ export class Minesweeper extends Component {
               mines={this.state.mines}
               onStart={this.handleStart}
               onStop={this.handleStop}
-              onChange={board => this.handleBoardChange(board)}
+              onChange={this.handleBoardChange}
               />
             <button
               type="button"
@@ -812,7 +808,7 @@ export class Minesweeper extends Component {
     this.setState({timerStatus: Timer.status.stopped});
   }
   handleBoardChange(board) {
-    this.setState({board: board});
+    this.setState({board});
   }
   handleRetry() {
     this.setState({
