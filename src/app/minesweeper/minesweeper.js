@@ -362,7 +362,9 @@ class CellValue {
     // if there is a mine
     if (this.flags & CellValue.f.mine) {
       // explode if clicked on mine
-      if (byClick) { this.subFlags |= CellValue.sf.exploded }
+      if (byClick) {
+        this.subFlags |= CellValue.sf.exploded;
+      }
       return CellValue.result.exploded;
     }
     return CellValue.result.opened;
@@ -427,6 +429,7 @@ class Board extends Component {
     const tgts = utils.fillArray(w * h, k => k);
     const excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
     const result = this.state.minePos = new Set();
+    // const result = new Set();
     let t = tgts.length;
     let e = excludes.length;
     let m = this.props.mines;
@@ -444,6 +447,7 @@ class Board extends Component {
       [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
     }
     this.setState({minePos: this.state.minePos});
+    // this.setState({minePos: result});
   }
   toggleMark(i, j) {
     const result = this.state.cells[i][j].toggleMark();
@@ -502,12 +506,15 @@ class Board extends Component {
       return;
     }
     let result = 0;
-    surr.forEach(([i2, j2]) => result |= this.open(i2, j2));
+    surr.forEach(function([i2, j2]) {
+      result |= this.open(i2, j2);
+    }.bind(this));
     return result;
   }
   gameClear() {
     this.stopGame();
     this.state.markPos = this.state.minePos;
+    // this.setState({markPos: this.state.minePos});
     this.state.markPos.forEach(pos => {
       const [i, j] = JSON.parse(pos);
       this.state.cells[i][j].forceMark();
@@ -586,7 +593,7 @@ class Board extends Component {
       const rowNodes = row.map((cell, j) => {
         return (
           <Cell
-            key={JSON.stringify([i, j])}
+            key={[i, j]}
             value={cell}
             onMouseDown={ev => this.listener.handleMouseDown(ev, i, j)}
             onMouseUp={() => this.listener.handleMouseUp(i, j)}
