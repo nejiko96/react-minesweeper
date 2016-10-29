@@ -382,24 +382,42 @@ class CellValue {
 }
 
 class Cell extends Component {
+  constructor(props) {
+    super(props);
+    // event binding
+    this.handleMouseDown = this.handleMouseDown.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+    this.handleMouseOver = this.handleMouseOver.bind(this);
+    this.handleMouseOut = this.handleMouseOut.bind(this);
+  }
   render() {
     return (
       <span
         style={styles.cell[this.props.value.styleIdx]}
-        onMouseDown={this.props.onMouseDown}
-        onMouseUp={this.props.onMouseUp}
-        onMouseOver={this.props.onMouseOver}
-        onMouseOut={this.props.onMouseOut}
+        onMouseDown={this.handleMouseDown}
+        onMouseUp={this.handleMouseUp}
+        onMouseOver={this.handleMouseOver}
+        onMouseOut={this.handleMouseOut}
         />);
+  }
+  handleMouseDown(ev) {
+    this.props.listener.handleMouseDown(ev, ...this.props.pos);
+  }
+  handleMouseUp() {
+    this.props.listener.handleMouseUp(...this.props.pos);
+  }
+  handleMouseOver() {
+    this.props.listener.handleMouseOver(...this.props.pos);
+  }
+  handleMouseOut() {
+    this.props.listener.handleMouseOut(...this.props.pos);
   }
 }
 
 Cell.propTypes = {
+  pos: React.PropTypes.array.isRequired,
   value: React.PropTypes.object.isRequired,
-  onMouseDown: React.PropTypes.func.isRequired,
-  onMouseUp: React.PropTypes.func.isRequired,
-  onMouseOver: React.PropTypes.func.isRequired,
-  onMouseOut: React.PropTypes.func.isRequired
+  listener: React.PropTypes.object.isRequired
 };
 
 class Board extends Component {
@@ -408,7 +426,8 @@ class Board extends Component {
       cells: utils.fillArray2D(props.width, props.height, () => new CellValue()),
       minePos: new Set(),
       markPos: new Set(),
-      countDown: props.width * props.height - props.mines
+      countDown: props.width * props.height - props.mines,
+      listener: new Listener(this)
     };
   }
   startGame(i, j) {
@@ -416,12 +435,11 @@ class Board extends Component {
     this.props.onStart();
   }
   stopGame() {
-    this.listener = Listener.noop;
+    this.setState({listener: Listener.noop});
     this.props.onStop();
   }
   resetGame() {
     this.setState(this.init(this.props));
-    this.listener = new Listener(this);
   }
   generateMines(i, j) {
     const w = this.props.width;
@@ -505,11 +523,9 @@ class Board extends Component {
     if (marks !== hint) {
       return;
     }
-    let result = 0;
-    surr.forEach(function([i2, j2]) {
-      result |= this.open(i2, j2);
-    }.bind(this));
-    return result;
+    return surr
+      .map(([i2, j2]) => this.open(i2, j2))
+      .reduce((a, b) => a | b);
   }
   gameClear() {
     this.stopGame();
@@ -581,7 +597,7 @@ class Board extends Component {
     this.handleBothMouseUp = this.handleBothMouseUp.bind(this);
   }
   componentDidMount() {
-    this.listener = new Listener(this);
+    this.setState({listener: new Listener(this)});
   }
   componentWillReceiveProps(nextProps) {
     if (this.props.gameId !== nextProps.gameId) {
@@ -594,11 +610,9 @@ class Board extends Component {
         return (
           <Cell
             key={[i, j]}
+            pos={[i, j]}
             value={cell}
-            onMouseDown={ev => this.listener.handleMouseDown(ev, i, j)}
-            onMouseUp={() => this.listener.handleMouseUp(i, j)}
-            onMouseOver={() => this.listener.handleMouseOver(i, j)}
-            onMouseOut={() => this.listener.handleMouseOut(i, j)}
+            listener={this.state.listener}
             />);
       });
       rowNodes.push(<br/>);

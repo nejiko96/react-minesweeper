@@ -67,6 +67,12 @@
     "extends": [
       "xo-react/space",
       "xo-space/esnext"
-    ]
+    ],
+    "rules": {
+      "linebreak-style": "off",
+      "no-unused-expressions": ["error", { "allowShortCircuit": true }],
+      "react/no-direct-mutation-state": "warn",
+      "react/jsx-no-bind": "warn"
+    }
   }
 }
