@@ -1,6 +1,9 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 
+/**
+ * utility functions
+ */
 const utils = {
   noop: () => {},
   fillArray: (n, fn) => Array.from({length: n}, (_, i) => fn(i)),
@@ -16,10 +19,12 @@ const utils = {
   }
 };
 
+/**
+ * style settings
+ */
 const cellSize = 32;
 const cellPx = `${cellSize}px`;
 const cellImg = `url('images/green_${cellSize}x${cellSize}.png')`;
-
 const textBoxStyle = {
   backgroundColor: '#f5f5f5',
   border: '1px solid #d3d3d3',
@@ -28,7 +33,6 @@ const textBoxStyle = {
   textAlign: 'right',
   width: '40px'
 };
-
 const cellStyle = i => {
   const x = -cellSize * (i % 3);
   const y = -cellSize * Math.floor(i / 3);
@@ -41,7 +45,6 @@ const cellStyle = i => {
     backgroundPosition: `${x}px ${y}px`
   };
 };
-
 const styles = {
   counter: textBoxStyle,
   timer: textBoxStyle,
@@ -49,9 +52,38 @@ const styles = {
     lineHeight: 0
   },
   cell: utils.fillArray(15, i => cellStyle(i)),
-  restart: {}
+  restart: {},
+  space: {
+    display: 'inline-block',
+    width: '20px'
+  }
 };
 
+/**
+ * locale strings
+ */
+const localeBundle = {
+  en: {
+    remain1: '',
+    remain2: 'mines',
+    timer1: 'time: ',
+    timer2: '',
+    retry: 'Retry',
+    cleared: 'Cleared!'
+  },
+  ja: {
+    remain1: 'あと',
+    remain2: '個',
+    timer1: '',
+    timer2: '秒経過',
+    retry: 'もう一回？',
+    cleared: 'クリア！'
+  }
+};
+
+/**
+ * counter component
+ */
 class Counter extends Component {
   render() {
     return (
@@ -64,6 +96,9 @@ Counter.propTypes = {
   value: React.PropTypes.number
 };
 
+/**
+ * timer componet
+ */
 class Timer extends Component {
   static get status() {
     return {
@@ -150,6 +185,9 @@ Timer.propTypes = {
 
 Timer.defaultProps = {limit: 0};
 
+/**
+ * mouse event convert class
+ */
 class Listener {
   static get event() {
     return {
@@ -248,6 +286,9 @@ class Listener {
   }
 }
 
+/**
+ * cell value container class
+ */
 class CellValue {
   static get f() {
     return {
@@ -379,6 +420,9 @@ class CellValue {
   }
 }
 
+/**
+ * cell component
+ */
 class Cell extends Component {
   constructor(props) {
     super(props);
@@ -418,6 +462,9 @@ Cell.propTypes = {
   listener: React.PropTypes.object.isRequired
 };
 
+/**
+ * board component
+ */
 class Board extends Component {
   init(props) {
     return {
@@ -711,6 +758,9 @@ Board.defaultProps = {
   onChange: utils.noop
 };
 
+/**
+ * minesweeper game component
+ */
 export class Minesweeper extends Component {
   static get settings() {
     return {
@@ -791,15 +841,22 @@ export class Minesweeper extends Component {
     utils.removeEventListener(this, 'selectstart', this.handleSelectStart);
   }
   render() {
+    const locale = localeBundle[this.props.lang];
     return (
       <div>
         <form>
           <nobr>
-            <Counter
+            {locale.remain1}<Counter
               value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
-              />mines
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            time : <Timer interval="1s" limit={999} status={this.state.timerStatus}/>
+              />{locale.remain2}
+            <span style={styles.space}/>
+            {locale.timer1}<Timer
+              interval="1s"
+              limit={999}
+              status={this.state.timerStatus}
+              />{locale.timer2}
+            <span style={styles.space}/>
+            {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
             <Board
               gameId={this.state.gameId}
               width={this.state.width}
@@ -813,7 +870,7 @@ export class Minesweeper extends Component {
               type="button"
               style={styles.restart}
               onClick={this.handleRetry}
-              >Retry</button>
+              >{locale.retry}</button>
           </nobr>
         </form>
       </div>
@@ -847,7 +904,11 @@ Minesweeper.propTypes = {
   level: React.PropTypes.string,
   width: React.PropTypes.number,
   height: React.PropTypes.number,
-  mines: React.PropTypes.number
+  mines: React.PropTypes.number,
+  lang: React.PropTypes.string
 };
 
-Minesweeper.defaultProps = {level: 'easy'};
+Minesweeper.defaultProps = {
+  level: 'easy',
+  lang: 'en'
+};
