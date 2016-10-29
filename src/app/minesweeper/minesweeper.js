@@ -440,12 +440,11 @@ class Board extends Component {
     this.setState(this.init(this.props));
   }
   generateMines(i, j) {
+    this.state.minePos.clear();
     const w = this.props.width;
     const h = this.props.height;
     const tgts = utils.fillArray(w * h, k => k);
     const excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
-    const result = this.state.minePos = new Set();
-    // const result = new Set();
     let t = tgts.length;
     let e = excludes.length;
     let m = this.props.mines;
@@ -458,12 +457,11 @@ class Board extends Component {
       const k = Math.floor(Math.random() * t--);
       const tgt = tgts[k];
       const pos = [i, j] = [Math.floor(tgt / w), tgt % w];
-      result.add(JSON.stringify(pos));
+      this.state.minePos.add(JSON.stringify(pos));
       this.state.cells[i][j].putMine();
       [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
     }
     this.setState({minePos: this.state.minePos});
-    // this.setState({minePos: result});
   }
   toggleMark(i, j) {
     const result = this.state.cells[i][j].toggleMark();
@@ -527,30 +525,30 @@ class Board extends Component {
   }
   gameClear() {
     this.stopGame();
-    this.state.markPos = this.state.minePos;
-    // this.setState({markPos: this.state.minePos});
-    this.state.markPos.forEach(pos => {
-      const [i, j] = JSON.parse(pos);
-      this.state.cells[i][j].forceMark();
-    });
+    this.state.minePos
+      .forEach(pos => {
+        const [i, j] = JSON.parse(pos);
+        this.state.markPos.add(pos);
+        this.state.cells[i][j].forceMark();
+      });
     this.setState({markPos: this.state.markPos});
     this.props.onChange(this.state);
   }
   gameOver() {
     this.stopGame();
     new Set([...this.state.minePos, ...this.state.markPos])
-    .forEach(pos => {
-      const [i, j] = JSON.parse(pos);
-      this.state.cells[i][j].open(false);
-    });
+      .forEach(pos => {
+        const [i, j] = JSON.parse(pos);
+        this.state.cells[i][j].open(false);
+      });
     this.props.onChange(this.state);
   }
   relatives(i, j, diffs) {
     return diffs
-    .map(([di, dj]) => [i + di, j + dj])
-    .filter(
-      ([i, j]) => this.state.cells[i] && this.state.cells[i][j]
-    );
+      .map(([di, dj]) => [i + di, j + dj])
+      .filter(
+        ([i, j]) => this.state.cells[i] && this.state.cells[i][j]
+      );
   }
   surroundings(i, j) {
     return this.relatives(i, j,
