@@ -398,9 +398,9 @@ class CellValue {
     // open
     this.flags &= ~CellValue.f.hidden;
 
-    // if there is a mine
+    // if mine is opened
     if (this.flags & CellValue.f.mine) {
-      // explode if clicked on mine
+      // explode when clicked
       if (byClick) {
         this.subFlags |= CellValue.sf.exploded;
       }
