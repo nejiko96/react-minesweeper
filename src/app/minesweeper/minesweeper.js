@@ -55,7 +55,10 @@ const styles = {
     lineHeight: 0
   },
   cell: utils.fillArray(15, i => cellStyle(i)),
-  restart: {},
+  restart: {
+    fontSize: '14px',
+    padding: '5px'
+  },
   space: {
     display: 'inline-block',
     width: '20px'
@@ -813,8 +816,8 @@ export class Minesweeper extends Component {
     if (JSON.stringify(nextProps) === JSON.stringify(this.props)) {
       return;
     }
-    this.timer.reset();
     this.board.reset();
+    this.timer.reset();
     this.setState(this.init(nextProps));
   }
   render() {
