@@ -46,6 +46,9 @@ const cellStyle = i => {
   };
 };
 const styles = {
+  container: {
+    whiteSpace: 'nowrap'
+  },
   counter: textBoxStyle,
   timer: textBoxStyle,
   cells: {
@@ -843,36 +846,32 @@ export class Minesweeper extends Component {
   render() {
     const locale = localeBundle[this.props.lang];
     return (
-      <div>
-        <form>
-          <nobr>
-            {locale.remain1}<Counter
-              value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
-              />{locale.remain2}
-            <span style={styles.space}/>
-            {locale.timer1}<Timer
-              interval="1s"
-              limit={999}
-              status={this.state.timerStatus}
-              />{locale.timer2}
-            <span style={styles.space}/>
-            {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
-            <Board
-              gameId={this.state.gameId}
-              width={this.state.width}
-              height={this.state.height}
-              mines={this.state.mines}
-              onStart={this.handleStart}
-              onStop={this.handleStop}
-              onChange={this.handleBoardChange}
-              />
-            <button
-              type="button"
-              style={styles.restart}
-              onClick={this.handleRetry}
-              >{locale.retry}</button>
-          </nobr>
-        </form>
+      <div style={styles.container}>
+        {locale.remain1}<Counter
+          value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
+          />{locale.remain2}
+        <span style={styles.space}/>
+        {locale.timer1}<Timer
+          interval="1s"
+          limit={999}
+          status={this.state.timerStatus}
+          />{locale.timer2}
+        <span style={styles.space}/>
+        {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
+        <Board
+          gameId={this.state.gameId}
+          width={this.state.width}
+          height={this.state.height}
+          mines={this.state.mines}
+          onStart={this.handleStart}
+          onStop={this.handleStop}
+          onChange={this.handleBoardChange}
+          />
+        <button
+          type="button"
+          style={styles.restart}
+          onClick={this.handleRetry}
+          >{locale.retry}</button>
       </div>
     );
   }
