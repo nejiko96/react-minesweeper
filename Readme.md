@@ -1,6 +1,10 @@
 Minesweeper powered by React.js
 ===============================
 
+## Demo
+
+http://nejiko96.github.io/react-minesweeper/public/index.html
+
 ## Install
 
 ```
@@ -10,8 +14,8 @@ npm install
 ## Run
 
 ```
-npm run serve
+gulp serve
 ```
 
-then go to http//localhost:3000/
+then open http//localhost:3000/
 
