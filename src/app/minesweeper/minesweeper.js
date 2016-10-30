@@ -103,13 +103,6 @@ Counter.propTypes = {
  * timer componet
  */
 class Timer extends Component {
-  static get status() {
-    return {
-      notStarted: 0,
-      running: 1,
-      stopped: 2
-    };
-  }
   static get powers() {
     return {
       ms: 1,
@@ -150,28 +143,8 @@ class Timer extends Component {
     this.stop = this.stop.bind(this);
     this.reset = this.reset.bind(this);
   }
-  componentDidMount() {
-    this.props.status === Timer.status.running && this.start();
-  }
   componentWillUnmount() {
     this.intervalID && this.stop();
-  }
-  componentWillReceiveProps(nextProps) {
-    if (this.props.status !== nextProps.status) {
-      switch (nextProps.status) {
-        case Timer.status.notStarted:
-          this.reset();
-          break;
-        case Timer.status.running:
-          this.start();
-          break;
-        case Timer.status.stopped:
-          this.stop();
-          break;
-        default:
-          break;
-      }
-    }
   }
   render() {
     return (
@@ -182,8 +155,7 @@ class Timer extends Component {
 
 Timer.propTypes = {
   interval: React.PropTypes.string.isRequired,
-  limit: React.PropTypes.number,
-  status: React.PropTypes.number.isRequired
+  limit: React.PropTypes.number
 };
 
 Timer.defaultProps = {limit: 0};
@@ -478,15 +450,15 @@ class Board extends Component {
       listener: new Listener(this)
     };
   }
-  startGame(i, j) {
+  start(i, j) {
     this.generateMines(i, j);
     this.props.onStart();
   }
-  stopGame() {
+  stop() {
     this.setState({listener: Listener.noop});
     this.props.onStop();
   }
-  resetGame() {
+  reset() {
     this.setState(this.init(this.props));
   }
   generateMines(i, j) {
@@ -574,7 +546,7 @@ class Board extends Component {
       .reduce((a, b) => a | b);
   }
   gameClear() {
-    this.stopGame();
+    this.stop();
     this.state.minePos
       .forEach(pos => {
         const [i, j] = JSON.parse(pos);
@@ -585,7 +557,7 @@ class Board extends Component {
     this.props.onChange(this.state);
   }
   gameOver() {
-    this.stopGame();
+    this.stop();
     new Set([...this.state.minePos, ...this.state.markPos])
       .forEach(pos => {
         const [i, j] = JSON.parse(pos);
@@ -621,9 +593,9 @@ class Board extends Component {
     super(props);
     this.state = this.init(props);
     // event binding
-    this.startGame = this.startGame.bind(this);
-    this.stopGame = this.stopGame.bind(this);
-    this.resetGame = this.resetGame.bind(this);
+    this.start = this.start.bind(this);
+    this.stop = this.stop.bind(this);
+    this.reset = this.reset.bind(this);
     this.generateMines = this.generateMines.bind(this);
     this.toggleMark = this.toggleMark.bind(this);
     this.open = this.open.bind(this);
@@ -644,11 +616,6 @@ class Board extends Component {
   }
   componentDidMount() {
     this.setState({listener: new Listener(this)});
-  }
-  componentWillReceiveProps(nextProps) {
-    if (this.props.gameId !== nextProps.gameId) {
-      this.resetGame();
-    }
   }
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
@@ -686,7 +653,7 @@ class Board extends Component {
   handleLeftMouseUp(i, j) {
     this.state.cells[i][j].release();
     if (this.state.minePos.size === 0) {
-      this.startGame(i, j);
+      this.start(i, j);
     }
     const result = this.open(i, j);
     if (result === CellValue.result.exploded) {
@@ -746,7 +713,6 @@ class Board extends Component {
 }
 
 Board.propTypes = {
-  gameId: React.PropTypes.number.isRequired,
   width: React.PropTypes.number.isRequired,
   height: React.PropTypes.number.isRequired,
   mines: React.PropTypes.number.isRequired,
@@ -820,8 +786,6 @@ export class Minesweeper extends Component {
   init(props) {
     const size = this.defaultSize(props.level) || this.customSize(props);
     const other = {
-      gameId: 1,
-      timerStatus: Timer.status.notStarted,
       board: null
     };
     return Object.assign({}, size, other);
@@ -855,6 +819,9 @@ export class Minesweeper extends Component {
           interval="1s"
           limit={999}
           status={this.state.timerStatus}
+          ref={c => {
+            this.timer = c;
+          }}
           />{locale.timer2}
         <span style={styles.space}/>
         {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
@@ -866,6 +833,9 @@ export class Minesweeper extends Component {
           onStart={this.handleStart}
           onStop={this.handleStop}
           onChange={this.handleBoardChange}
+          ref={c => {
+            this.board = c;
+          }}
           />
         <button
           type="button"
@@ -876,20 +846,20 @@ export class Minesweeper extends Component {
     );
   }
   handleStart() {
-    this.setState({timerStatus: Timer.status.running});
+    this.timer.start();
   }
   handleStop() {
-    this.setState({timerStatus: Timer.status.stopped});
+    this.timer.stop();
   }
   handleBoardChange(board) {
     this.setState({board});
   }
   handleRetry() {
     this.setState({
-      gameId: this.state.gameId + 1,
-      timerStatus: Timer.status.notStarted,
       board: null
     });
+    this.board.reset();
+    this.timer.reset();
   }
   handleContextMenu(e) {
     e.preventDefault();
