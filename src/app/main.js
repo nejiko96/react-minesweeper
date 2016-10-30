@@ -1,9 +1,7 @@
 import React, {Component} from 'react';
-import {Header} from './header';
 import {Title} from './title';
-import {Techs} from './techs/techs';
+import {MinesweeperBox} from './minesweeper/minesweeper-box';
 import {Footer} from './footer';
-import {Minesweeper} from './minesweeper/minesweeper';
 
 const styles = {
   container: {
@@ -22,11 +20,9 @@ export class Main extends Component {
   render() {
     return (
       <div style={styles.container}>
-        <Header/>
         <main style={styles.main}>
           <Title/>
-          <Minesweeper/>
-          <Techs/>
+          <MinesweeperBox/>
         </main>
         <Footer/>
       </div>

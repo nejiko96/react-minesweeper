@@ -219,8 +219,7 @@ class Listener {
     }[ev.button];
     this.triggerCallback(
       Listener.event.mouseDown,
-      this.pressed,
-      i, j
+      this.pressed, i, j
     );
   }
   handleMouseUp(i, j) {
@@ -231,8 +230,7 @@ class Listener {
     this.pressed = 0;
     this.triggerCallback(
       Listener.event.mouseUp,
-      pressed,
-      i, j
+      pressed, i, j
     );
   }
   handleMouseOver(i, j) {
@@ -241,8 +239,7 @@ class Listener {
     }
     this.triggerCallback(
       Listener.event.mouseOver,
-      this.pressed,
-      i, j
+      this.pressed, i, j
     );
   }
   handleMouseOut(i, j) {
@@ -251,8 +248,7 @@ class Listener {
     }
     this.triggerCallback(
       Listener.event.mouseOut,
-      this.pressed,
-      i, j
+      this.pressed, i, j
     );
   }
   triggerCallback(e, b, i, j) {
@@ -617,6 +613,12 @@ class Board extends Component {
   componentDidMount() {
     this.setState({listener: new Listener(this)});
   }
+  componentWillReceiveProps(nextProps) {
+    if (JSON.stringify(nextProps) === JSON.stringify(this.props)) {
+      return;
+    }
+    this.setState(this.init(nextProps));
+  }
   render() {
     const boardNodes = this.state.cells.map((row, i) => {
       const rowNodes = row.map((cell, j) => {
@@ -807,6 +809,13 @@ export class Minesweeper extends Component {
     utils.removeEventListener(this, 'contextmenu', this.handleContextMenu);
     utils.removeEventListener(this, 'selectstart', this.handleSelectStart);
   }
+  componentWillReceiveProps(nextProps) {
+    if (JSON.stringify(nextProps) === JSON.stringify(this.props)) {
+      return;
+    }
+    this.setState(this.init(nextProps));
+    this.timer.reset();
+  }
   render() {
     const locale = localeBundle[this.props.lang];
     return (
@@ -826,7 +835,6 @@ export class Minesweeper extends Component {
         <span style={styles.space}/>
         {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
         <Board
-          gameId={this.state.gameId}
           width={this.state.width}
           height={this.state.height}
           mines={this.state.mines}
