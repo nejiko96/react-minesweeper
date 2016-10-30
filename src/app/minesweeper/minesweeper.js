@@ -813,8 +813,9 @@ export class Minesweeper extends Component {
     if (JSON.stringify(nextProps) === JSON.stringify(this.props)) {
       return;
     }
-    this.setState(this.init(nextProps));
     this.timer.reset();
+    this.board.reset();
+    this.setState(this.init(nextProps));
   }
   render() {
     const locale = localeBundle[this.props.lang];
