@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import {Title} from './title';
-import {MinesweeperBox} from './minesweeper/minesweeper-box';
+import {MinesweeperDemo} from './minesweeper/minesweeper-demo';
 import {Footer} from './footer';
 
 const styles = {
@@ -22,7 +22,7 @@ export class Main extends Component {
       <div style={styles.container}>
         <main style={styles.main}>
           <Title/>
-          <MinesweeperBox/>
+          <MinesweeperDemo/>
         </main>
         <Footer/>
       </div>

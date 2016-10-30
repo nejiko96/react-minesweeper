@@ -4,14 +4,10 @@ import {Minesweeper} from './minesweeper';
 const styles = {
   container: {
     margin: '1rem'
-    // display: 'flex',
-    // flexDirection: 'row',
-    // flexWrap: 'wrap',
-    // justifyContent: 'space-around'
   }
 };
 
-export class MinesweeperBox extends Component {
+export class MinesweeperDemo extends Component {
   constructor() {
     super();
     this.state = {
