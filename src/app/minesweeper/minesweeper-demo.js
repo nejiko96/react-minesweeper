@@ -11,11 +11,13 @@ export class MinesweeperDemo extends Component {
   constructor() {
     super();
     this.state = {
-      level: '',
+      lang: 'en',
+      level: 'easy',
       width: '9',
       height: '9',
       mines: '10'
     };
+    this.handleLangChange = this.handleLangChange.bind(this);
     this.handleLevelChange = this.handleLevelChange.bind(this);
     this.handleWidthChange = this.handleWidthChange.bind(this);
     this.handleHeightChange = this.handleHeightChange.bind(this);
@@ -51,18 +53,29 @@ export class MinesweeperDemo extends Component {
     }
     return (
       <div style={styles.container}>
+        Lang:
+        <select
+          value={this.state.lang}
+          onChange={this.handleLangChange}
+          >
+          <option value="en">en(default)</option>
+          <option value="ja">ja</option>
+        </select>
+        <br/>
         Level:
         <select
           value={this.state.level}
           onChange={this.handleLevelChange}
           >
-          <option value="easy">easy</option>
+          <option value="easy">easy(default)</option>
           <option value="medium">medium</option>
           <option value="hard">hard</option>
           <option value="custom">custom</option>
         </select>
         {customFields}
+        <p/>
         <Minesweeper
+          lang={this.state.lang}
           level={this.state.level}
           width={this.state.width - 0}
           height={this.state.height - 0}
@@ -70,6 +83,9 @@ export class MinesweeperDemo extends Component {
           />
       </div>
     );
+  }
+  handleLangChange(e) {
+    this.setState({lang: e.target.value});
   }
   handleLevelChange(e) {
     this.setState({level: e.target.value});

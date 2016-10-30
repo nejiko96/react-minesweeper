@@ -14,10 +14,9 @@ export class Footer extends Component {
   render() {
     return (
       <footer style={styles.footer}>
-        react-minesweeper by nejiko96<br/>
         <a href="https://github.com/nejiko96/react-minesweeper">
-          https://github.com/nejiko96/react-minesweeper
-        </a>
+          react-minesweeper
+        </a>&nbsp;by nejiko96
       </footer>
     );
   }
