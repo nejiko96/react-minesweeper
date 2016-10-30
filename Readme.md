@@ -17,5 +17,5 @@ npm install
 gulp serve
 ```
 
-then open http//localhost:3000/
+then open http://localhost:3000/
 
