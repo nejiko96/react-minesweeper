@@ -37,6 +37,12 @@ module.exports = {
         loaders: [
           'babel'
         ]
+      },
+      {
+        test: /.png$/,
+        loaders: [
+          'url'
+        ]
       }
     ]
   },
