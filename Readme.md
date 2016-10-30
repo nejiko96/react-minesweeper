@@ -19,3 +19,6 @@ gulp serve
 
 then open http://localhost:3000/
 
+## License
+
+Released under the MIT license.

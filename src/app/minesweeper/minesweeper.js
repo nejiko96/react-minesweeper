@@ -1,3 +1,11 @@
+/**
+ * React.js minesweeper
+ * Date: 2016/10/31
+ *
+ * Copyright (c) 2016 H.Nakatani
+ * Released under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 
