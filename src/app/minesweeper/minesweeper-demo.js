@@ -32,33 +32,6 @@ export class MinesweeperDemo extends Component {
     this.handleMinesChange = this.handleMinesChange.bind(this);
   }
   render() {
-    let customFields = null;
-    if (this.state.level === "custom") {
-      customFields = (
-        <div>
-          Width:
-          <input
-            type="text"
-            value={this.state.width}
-            onChange={this.handleWidthChange}
-            />
-          <br/>
-          Height:
-          <input
-            type="text"
-            value={this.state.height}
-            onChange={this.handleHeightChange}
-            />
-          <br/>
-          Mines:
-          <input
-            type="text"
-            value={this.state.mines}
-            onChange={this.handleMinesChange}
-            />
-        </div>
-      );
-    }
     return (
       <div style={styles.container}>
         Lang:
@@ -80,7 +53,30 @@ export class MinesweeperDemo extends Component {
           <option value="hard">hard</option>
           <option value="custom">custom</option>
         </select>
-        {customFields}
+        {this.state.level === "custom" &&
+          <div>
+            Width:
+            <input
+              type="text"
+              value={this.state.width}
+              onChange={this.handleWidthChange}
+              />
+            <br/>
+            Height:
+            <input
+              type="text"
+              value={this.state.height}
+              onChange={this.handleHeightChange}
+              />
+            <br/>
+            Mines:
+            <input
+              type="text"
+              value={this.state.mines}
+              onChange={this.handleMinesChange}
+              />
+          </div>
+        }
         <p/>
         <Minesweeper
           lang={this.state.lang}
