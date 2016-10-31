@@ -627,7 +627,7 @@ class Board extends Component {
         const pos = [i, j];
         return (
           <Cell
-            key={pos}
+            key={pos.toString()}
             pos={pos}
             value={cell}
             listener={this.state.listener}
