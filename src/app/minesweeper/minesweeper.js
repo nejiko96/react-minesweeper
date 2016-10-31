@@ -463,23 +463,23 @@ class Board extends Component {
     this.state.minePos.clear();
     const w = this.props.width;
     const h = this.props.height;
-    const tgts = utils.fillArray(w * h, k => k);
+    const samples = utils.fillArray(w * h, k => k);
     const excludes = this.neighbors(i, j).map(([i2, j2]) => i2 * w + j2);
-    let t = tgts.length;
+    let s = samples.length;
     let e = excludes.length;
     let m = this.props.mines;
     while (e--) {
       const k = excludes[e];
-      t--;
-      [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
+      s--;
+      [samples[k], samples[s]] = [samples[s], samples[k]];
     }
     while (m--) {
-      const k = Math.floor(Math.random() * t--);
-      const tgt = tgts[k];
-      const pos = [i, j] = [Math.floor(tgt / w), tgt % w];
+      const k = Math.floor(Math.random() * s--);
+      const smp = samples[k];
+      const pos = [i, j] = [Math.floor(smp / w), smp % w];
       this.state.minePos.add(JSON.stringify(pos));
       this.state.cells[i][j].putMine();
-      [tgts[k], tgts[t]] = [tgts[t], tgts[k]];
+      [samples[k], samples[s]] = [samples[s], samples[k]];
     }
     this.setState({minePos: this.state.minePos});
   }
