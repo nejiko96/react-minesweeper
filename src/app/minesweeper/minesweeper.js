@@ -622,23 +622,18 @@ class Board extends Component {
     this.setState(this.init(nextProps));
   }
   render() {
-    const boardNodes = this.state.cells.map((row, i) => {
-      const rowNodes = row.map((cell, j) => {
-        const pos = [i, j];
-        return (
-          <Cell
-            key={pos.toString()}
-            pos={pos}
-            value={cell}
-            listener={this.state.listener}
-            />);
-      });
-      rowNodes.push(<br/>);
-      return rowNodes;
-    });
     return (
       <div style={styles.cells}>
-        {boardNodes}
+      {this.state.cells.map((row, i) =>
+        row.map((cell, j) =>
+          <Cell
+            key={`${i}_${j}`}
+            pos={[i, j]}
+            value={cell}
+            listener={this.state.listener}
+            />
+        ).concat(<br/>)
+      )}
       </div>
     );
   }
