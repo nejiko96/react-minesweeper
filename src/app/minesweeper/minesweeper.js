@@ -98,17 +98,8 @@ const localeBundle = {
 /**
  * counter component
  */
-class Counter extends Component {
-  render() {
-    return (
-      <span style={styles.counter} >{this.props.value}</span>
-    );
-  }
-}
-
-Counter.propTypes = {
-  value: React.PropTypes.number
-};
+const Counter = props => (<span style={styles.counter} >{props.value}</span>);
+Counter.propTypes = {value: React.PropTypes.number};
 
 /**
  * timer componet
