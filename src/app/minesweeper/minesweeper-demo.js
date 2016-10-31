@@ -21,9 +21,9 @@ export class MinesweeperDemo extends Component {
     this.state = {
       lang: 'en',
       level: 'easy',
-      width: '9',
-      height: '9',
-      mines: '10'
+      width: '',
+      height: '',
+      mines: ''
     };
     this.handleLangChange = this.handleLangChange.bind(this);
     this.handleLevelChange = this.handleLevelChange.bind(this);
@@ -59,6 +59,7 @@ export class MinesweeperDemo extends Component {
             <input
               type="text"
               value={this.state.width}
+              placeholder="9 - 30"
               onChange={this.handleWidthChange}
               />
             <br/>
@@ -66,6 +67,7 @@ export class MinesweeperDemo extends Component {
             <input
               type="text"
               value={this.state.height}
+              placeholder="9 - 24"
               onChange={this.handleHeightChange}
               />
             <br/>
@@ -73,6 +75,7 @@ export class MinesweeperDemo extends Component {
             <input
               type="text"
               value={this.state.mines}
+              placeholder="10 - 999"
               onChange={this.handleMinesChange}
               />
           </div>
