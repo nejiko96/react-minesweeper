@@ -812,7 +812,6 @@ export class Minesweeper extends Component {
         {locale.timer1}<Timer
           interval="1s"
           limit={999}
-          status={this.state.timerStatus}
           ref={c => {
             this.timer = c;
           }}
@@ -849,11 +848,9 @@ export class Minesweeper extends Component {
     this.setState({marks});
   }
   handleRetry() {
-    this.setState({
-      board: null
-    });
     this.board.reset();
     this.timer.reset();
+    this.setState(this.init(this.props));
   }
   handleContextMenu(e) {
     e.preventDefault();
