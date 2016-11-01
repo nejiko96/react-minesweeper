@@ -440,11 +440,11 @@ Cell.propTypes = {
  */
 class Board extends Component {
   init(props) {
+    this.minePos = new Set();
+    this.markPos = new Set();
+    this.countDown = props.width * props.height - props.mines;
     return {
       cells: utils.fillArray2D(props.width, props.height, () => new CellValue()),
-      minePos: new Set(),
-      markPos: new Set(),
-      countDown: props.width * props.height - props.mines,
       listener: new Listener(this)
     };
   }
@@ -460,7 +460,7 @@ class Board extends Component {
     this.setState(this.init(this.props));
   }
   generateMines(i, j) {
-    this.state.minePos.clear();
+    this.minePos.clear();
     const w = this.props.width;
     const h = this.props.height;
     const samples = utils.fillArray(w * h, k => k);
@@ -477,11 +477,10 @@ class Board extends Component {
       const k = Math.floor(Math.random() * s--);
       const smp = samples[k];
       const pos = [i, j] = [Math.floor(smp / w), smp % w];
-      this.state.minePos.add(JSON.stringify(pos));
+      this.minePos.add(JSON.stringify(pos));
       this.state.cells[i][j].putMine();
       [samples[k], samples[s]] = [samples[s], samples[k]];
     }
-    this.setState({minePos: this.state.minePos});
   }
   toggleMark(i, j) {
     const result = this.state.cells[i][j].toggleMark();
@@ -491,21 +490,20 @@ class Board extends Component {
     const pos = JSON.stringify([i, j]);
     switch (result) {
       case CellValue.result.marked:
-        this.state.markPos.add(pos);
+        this.markPos.add(pos);
         break;
       case CellValue.result.unmarked:
-        this.state.markPos.delete(pos);
+        this.markPos.delete(pos);
         break;
       default:
         break;
     }
-    this.setState({markPos: this.state.markPos});
-    this.props.onMarksChange(this.state.markPos.size);
+    this.props.onMarksChange(this.markPos.size);
   }
   open(i, j) {
     const result = this.state.cells[i][j].open();
     if (result === CellValue.result.opened) {
-      this.state.countDown--;
+      this.countDown--;
       this.postOpen(i, j);
     }
     return result;
@@ -514,7 +512,7 @@ class Board extends Component {
     const surr = this.surroundings(i, j);
     let hint = 0;
     surr.forEach(pos => {
-      if (this.state.minePos.has(JSON.stringify(pos))) {
+      if (this.minePos.has(JSON.stringify(pos))) {
         hint++;
       }
     });
@@ -532,7 +530,7 @@ class Board extends Component {
     const surr = this.surroundings(i, j);
     let marks = 0;
     surr.forEach(pos => {
-      if (this.state.markPos.has(JSON.stringify(pos))) {
+      if (this.markPos.has(JSON.stringify(pos))) {
         marks++;
       }
     });
@@ -545,18 +543,17 @@ class Board extends Component {
   }
   gameClear() {
     this.stop(true);
-    this.state.minePos
+    this.minePos
       .forEach(pos => {
         const [i, j] = JSON.parse(pos);
-        this.state.markPos.add(pos);
+        this.markPos.add(pos);
         this.state.cells[i][j].forceMark();
       });
-    this.setState({markPos: this.state.markPos});
-    this.props.onMarksChange(this.state.markPos.size);
+    this.props.onMarksChange(this.markPos.size);
   }
   gameOver() {
     this.stop();
-    new Set([...this.state.minePos, ...this.state.markPos])
+    new Set([...this.minePos, ...this.markPos])
       .forEach(pos => {
         const [i, j] = JSON.parse(pos);
         this.state.cells[i][j].open(false);
@@ -650,7 +647,7 @@ class Board extends Component {
   }
   handleLeftMouseUp(i, j) {
     this.state.cells[i][j].release();
-    if (this.state.minePos.size === 0) {
+    if (this.minePos.size === 0) {
       this.start(i, j);
     }
     const result = this.open(i, j);
@@ -658,15 +655,11 @@ class Board extends Component {
       this.gameOver();
     }
     if (
-      result === CellValue.result.opened &&
-      this.state.countDown <= 0
+      this.countDown <= 0
     ) {
       this.gameClear();
     }
-    this.setState({
-      cells: this.state.cells,
-      countDown: this.state.countDown
-    });
+    this.setState({cells: this.state.cells});
   }
   handleRightMouseDown(i, j) {
     this.toggleMark(i, j);
@@ -697,16 +690,10 @@ class Board extends Component {
     const result = this.areaOpen(i, j);
     if (result & CellValue.result.exploded) {
       this.gameOver();
-    } else if (
-      result & CellValue.result.opened &&
-      this.state.countDown <= 0
-    ) {
+    } else if (this.countDown <= 0) {
       this.gameClear();
     }
-    this.setState({
-      cells: this.state.cells,
-      countDown: this.state.countDown
-    });
+    this.setState({cells: this.state.cells});
   }
 }
 
