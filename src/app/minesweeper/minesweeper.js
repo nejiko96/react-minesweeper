@@ -452,9 +452,9 @@ class Board extends Component {
     this.generateMines(i, j);
     this.props.onStart();
   }
-  stop() {
+  stop(cleared = false) {
     this.setState({listener: Listener.noop});
-    this.props.onStop();
+    this.props.onStop(cleared);
   }
   reset() {
     this.setState(this.init(this.props));
@@ -500,7 +500,7 @@ class Board extends Component {
         break;
     }
     this.setState({markPos: this.state.markPos});
-    this.props.onChange(this.state);
+    this.props.onMarksChange(this.state.markPos.size);
   }
   open(i, j) {
     const result = this.state.cells[i][j].open();
@@ -544,7 +544,7 @@ class Board extends Component {
       .reduce((a, b) => a | b);
   }
   gameClear() {
-    this.stop();
+    this.stop(true);
     this.state.minePos
       .forEach(pos => {
         const [i, j] = JSON.parse(pos);
@@ -552,7 +552,7 @@ class Board extends Component {
         this.state.cells[i][j].forceMark();
       });
     this.setState({markPos: this.state.markPos});
-    this.props.onChange(this.state);
+    this.props.onMarksChange(this.state.markPos.size);
   }
   gameOver() {
     this.stop();
@@ -561,7 +561,6 @@ class Board extends Component {
         const [i, j] = JSON.parse(pos);
         this.state.cells[i][j].open(false);
       });
-    this.props.onChange(this.state);
   }
   relatives(i, j, diffs) {
     return diffs
@@ -717,13 +716,13 @@ Board.propTypes = {
   mines: React.PropTypes.number.isRequired,
   onStart: React.PropTypes.func,
   onStop: React.PropTypes.func,
-  onChange: React.PropTypes.func
+  onMarksChange: React.PropTypes.func
 };
 
 Board.defaultProps = {
   onStart: utils.noop,
   onStop: utils.noop,
-  onChange: utils.noop
+  onMarksChange: utils.noop
 };
 
 /**
@@ -785,7 +784,8 @@ export class Minesweeper extends Component {
   init(props) {
     const size = this.defaultSize(props.level) || this.customSize(props);
     const other = {
-      board: null
+      cleared: false,
+      marks: 0
     };
     return Object.assign({}, size, other);
   }
@@ -795,7 +795,7 @@ export class Minesweeper extends Component {
     // event binding
     this.handleStart = this.handleStart.bind(this);
     this.handleStop = this.handleStop.bind(this);
-    this.handleBoardChange = this.handleBoardChange.bind(this);
+    this.handleMarksChange = this.handleMarksChange.bind(this);
     this.handleRetry = this.handleRetry.bind(this);
   }
   componentDidMount() {
@@ -819,7 +819,7 @@ export class Minesweeper extends Component {
     return (
       <div style={styles.container}>
         {locale.remain1}<Counter
-          value={this.state.mines - (this.state.board && this.state.board.markPos.size)}
+          value={this.state.mines - this.state.marks}
           />{locale.remain2}
         <span style={styles.space}/>
         {locale.timer1}<Timer
@@ -831,14 +831,14 @@ export class Minesweeper extends Component {
           }}
           />{locale.timer2}
         <span style={styles.space}/>
-        {this.state.board && this.state.board.countDown <= 0 ? locale.cleared : ''}
+        {this.state.cleared ? locale.cleared : ''}
         <Board
           width={this.state.width}
           height={this.state.height}
           mines={this.state.mines}
           onStart={this.handleStart}
           onStop={this.handleStop}
-          onChange={this.handleBoardChange}
+          onMarksChange={this.handleMarksChange}
           ref={c => {
             this.board = c;
           }}
@@ -854,11 +854,12 @@ export class Minesweeper extends Component {
   handleStart() {
     this.timer.start();
   }
-  handleStop() {
+  handleStop(cleared) {
     this.timer.stop();
+    this.setState({cleared});
   }
-  handleBoardChange(board) {
-    this.setState({board});
+  handleMarksChange(marks) {
+    this.setState({marks});
   }
   handleRetry() {
     this.setState({
